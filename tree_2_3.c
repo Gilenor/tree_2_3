@@ -10,8 +10,24 @@
 /* -------- static functions ----------------------------------------------- */
 
 
+/* return minimal element in node/tree */
+static value_t get_min(struct node *node)
+{
+    // TODO: what do in this way, maybe return pointer to value?
+    if (node == NULL)
+    {
+       return 0;
+    }
+
+    while (node->type != LEAF)
+        node = node->first;
+
+    return node->value;
+}
+
+
 /* return true if 'node a' bigger than 'node b'
- * if node be  NULL he was considered greater than others 
+ * if node be  NULL he was considered greater than others
  * when sorting, all empty nodes will be on the "right" */
 static bool bigger_than(struct node *a, struct node *b)
 {
@@ -25,7 +41,7 @@ static bool bigger_than(struct node *a, struct node *b)
 }
 
 
-/* sort elements to ascending order 
+/* sort elements to ascending order
  * if (*a > *b) they switch places */
 static void min_max(struct node **a, struct node **b)
 {
@@ -47,23 +63,6 @@ static int child_cnt(NODE_2_3 *node)
         return 0;
 
     return (node->first != NULL) + (node->second != NULL) + (node->third != NULL);
-}
-
-
-/* return minimal element in node/tree */
-static value_t get_min(struct node *node)
-{
-    // TODO: what do in this way, maybe return pointer to value?
-    if (node == NULL)
-    {
-        fputs("Error! The node does not exist! Can't get min value.", stderr);
-        exit(EXIT_FAILURE);
-    }
-
-    while (node->type != LEAF)
-        node = node->first;
-
-    return node->value;
 }
 
 
@@ -315,9 +314,9 @@ static void print_tree_elements_in_order(TREE_2_3 tree,  int *num_element)
         return;
     }
 
-    print_elements_in_tree(tree->first, num_element);
-    print_elements_in_tree(tree->second, num_element);
-    print_elements_in_tree(tree->third, num_element);
+    print_tree_elements_in_order(tree->first, num_element);
+    print_tree_elements_in_order(tree->second, num_element);
+    print_tree_elements_in_order(tree->third, num_element);
 }
 
 
@@ -335,7 +334,7 @@ void insert_value(TREE_2_3 *tree, value_t value)
 	/* Empty tree */
 	if (*tree == NULL)
 		*tree = new_leaf_node(value);
-    else 
+    else
     if ( (*tree)->type == LEAF ) /* Tree is leaf (1 element) */
     {
         struct node *new_node = new_inner_node();
@@ -402,12 +401,12 @@ struct node * search_value(TREE_2_3 tree, value_t value)
 
 		case INNER:
 					if (value < tree->second_min)
-						return find_value(&tree->first, value);
+						return search_value(tree->first, value);
 					else
 					if ( !tree->third || (value < tree->third_min) )
-						return find_value(&tree->second, value);
+						return search_value(tree->second, value);
 					else
-						return find_value(&tree->third, value);
+						return search_value(tree->third, value);
 
 		case EMPTY:
 					fprintf(stderr, "Error! Tree can't have empty node!");

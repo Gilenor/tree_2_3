@@ -14,8 +14,10 @@
 
 int main(int argc, char **argv)
 {
+    clock_t start, end;
     struct timespec start2, end2;
 
+    start = clock();
     clock_gettime(CLOCK_REALTIME, &start2);
 
 #ifdef RANDOM
@@ -29,10 +31,7 @@ int main(int argc, char **argv)
 #endif // RANDOM
 
 	int cnt_elements = 0;
-	struct node *finded = NULL;
 	TREE_2_3 tree = new_tree();
-
-
 
 
     for (int i = 0; i < elements; i++)
@@ -57,6 +56,7 @@ int main(int argc, char **argv)
     printf("Uniq elements in tree: %d\n", elements-(elements-cnt_elements));
     printf("Duplicated elements in array: %d\n", elements-cnt_elements);
 	printf("sizeof struct node: %zu\n", sizeof(struct node));
+	putchar('\n');
 
 
     while (!tree_is_empty(tree))
@@ -78,7 +78,11 @@ int main(int argc, char **argv)
 
 	tree_delete(tree);
 
+    end = clock();
 	clock_gettime(CLOCK_REALTIME, &end2);
+
+	putchar('\n');
+	fprintf(stderr, "Time to work programm %f(clock)\n", (double)(end - start) / CLOCKS_PER_SEC);
 	fprintf(stderr, "Time to work programm %f(clock_gettime)\n", (end2.tv_sec - start2.tv_sec) + 1e-9*(end2.tv_nsec - start2.tv_nsec));
 
 	return 0;
