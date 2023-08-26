@@ -21,7 +21,6 @@
 
 typedef int value_t;
 
-
 enum nodetype
 {
 	EMPTY,
