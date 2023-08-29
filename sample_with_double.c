@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     /* Feel tree with values from array */
     for (size_t i = 0; i < SIZE_ARR(nums); i++)
     {
-        if (!search_key(tree_get_root(tree), &nums[i]))
+        if (!search_key(tree, &nums[i]))
         {
             insert_key(tree, &nums[i]);
             printf("\t Insert element: < %f >\n", nums[i]);
@@ -103,7 +103,7 @@ int main(int argc, char **argv)
     {
         tree_key deleted = tree_get_min(tree);
 
-        if (search_key(tree_get_root(tree), deleted))
+        if (search_key(tree, deleted))
         {
             printf("Delete value < %f > from tree\n", *(double*)deleted);
             remove_key(tree, deleted);
