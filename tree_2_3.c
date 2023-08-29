@@ -7,41 +7,134 @@
 #define DELETE_CORRECT  NULL
 
 
-/* -------- static functions ----------------------------------------------- */
+/* -------- Data structs --------------------------------------------------- */
 
 
-/* return minimal element in node/tree */
-static value_t get_min(struct node *node)
+enum nodetype
 {
-    // TODO: what do in this way, maybe return pointer to value?
-    if (node == NULL)
-    {
-       return 0;
-    }
+	EMPTY,
+	INNER,
+	LEAF
+};
 
-    while (node->type != LEAF)
-        node = node->first;
 
-    return node->value;
+struct node
+{
+	enum nodetype type;
+
+	union
+	{
+		/* If nodetype is INNER */
+		struct
+		{
+			struct node *first;
+			struct node *second;
+			struct node *third;
+
+			tree_key second_min;
+			tree_key third_min;
+		};
+
+		/* If nodetype is LEAF */
+		struct
+		{
+            tree_key key;
+
+            /* To access the function working with the key
+               it is possible to use a pointer to the tree
+               where they are contained, but this neither
+               reduces memory usage nor makes it more clear */
+            func_cmp_key    cmp_key;
+            func_copy_key   copy_key;
+            func_free_key   free_key;
+		};
+	};
+};
+
+
+struct tree
+{
+    struct node *root;
+    unsigned long elements;
+
+    /* Functions for working with key value */
+    func_cmp_key    cmp_key;
+    func_copy_key   copy_key;
+    func_free_key   free_key;
+};
+
+
+/* -------- Static functions ----------------------------------------------- */
+
+
+/* Return address smaller node in node/tree */
+static struct node * get_min_node(Node_2_3 root)
+{
+    if (root == NULL)
+        return NULL;
+
+    while (root->type != LEAF)
+        root = root->first;
+
+    return root;
 }
 
 
-/* return true if 'node a' bigger than 'node b'
+/* Return address smaller key for root */
+static tree_key get_min(Node_2_3 root)
+{
+    struct node *result = get_min_node(root);
+
+    if (!result)
+        return NULL;
+
+    return result->key;
+}
+
+
+/* Getter for comparing function associated with tree_key type */
+static func_cmp_key get_cmp_func(struct node *node)
+{
+    struct node *leaf = get_min_node(node);
+
+    return leaf->cmp_key;
+}
+
+
+/* Getter for copying function associated with tree_key type */
+static func_copy_key get_copy_func(struct node *node)
+{
+    struct node *leaf = get_min_node(node);
+
+    return leaf->copy_key;
+}
+
+
+/* Getter for freeing function associated with tree_key type */
+static func_free_key get_free_func(struct node *node)
+{
+    struct node *leaf = get_min_node(node);
+
+    return leaf->free_key;
+}
+
+
+/* Return true if <node a> bigger than <node b>
  * if node be  NULL he was considered greater than others
  * when sorting, all empty nodes will be on the "right" */
 static bool bigger_than(struct node *a, struct node *b)
 {
     if (a && b)
-        return get_min(a) > get_min(b);
+        return GREATER == get_cmp_func(a)(get_min(a), get_min(b));
     else
-    if (!a && b) // only 'a is Null
+    if (!a && b) // only <a> is Null
         return true;
 
     return false;
 }
 
 
-/* sort elements to ascending order
+/* Sort elements to ascending order
  * if (*a > *b) they switch places */
 static void min_max(struct node **a, struct node **b)
 {
@@ -56,8 +149,8 @@ static void min_max(struct node **a, struct node **b)
 }
 
 
-/* count children of node */
-static int child_cnt(NODE_2_3 *node)
+/* Count children of node */
+static int child_cnt(struct node *node)
 {
     if (node == NULL)
         return 0;
@@ -66,6 +159,7 @@ static int child_cnt(NODE_2_3 *node)
 }
 
 
+/* Make and return node with EMPTY type */
 static struct node * new_empty_node(void)
 {
 	struct node *tmp = calloc(sizeof(struct node), 1);
@@ -77,6 +171,7 @@ static struct node * new_empty_node(void)
 }
 
 
+/* Make and return node with INNER type */
 static struct node * new_inner_node(void)
 {
     struct node *tmp = new_empty_node();
@@ -87,23 +182,32 @@ static struct node * new_inner_node(void)
 }
 
 
-static struct node * new_leaf_node(value_t value)
+/* Make and return node with LEAF type */
+static struct node * new_leaf_node(tree_key value, Tree_2_3 tree)
 {
 	struct node *tmp = new_empty_node();
 
 	tmp->type = LEAF;
-	tmp->value = value;
+	tmp->key = tree->copy_key(value);
+
+	/* Each leaf contains pointers to functions
+       for working with the key */
+    tmp->cmp_key  = tree->cmp_key;
+    tmp->copy_key = tree->copy_key;
+    tmp->free_key = tree->free_key;
 
 	return tmp;
 }
 
 
-/* sorted node in asc order and make it valid */
+/* Sorted node in asc order and make it valid */
 static void validate_node(struct node *node)
 {
-    // TODO: maybe error or exception?
     if (node == NULL)
-        return;
+    {
+        fprintf(stderr, "Error! Try work with nullable node in func %s\n!", __func__);
+        exit(EXIT_FAILURE);
+    }
 
     min_max(&node->first, &node->second);
 
@@ -113,8 +217,11 @@ static void validate_node(struct node *node)
         min_max(&node->second, &node->third);
     }
 
-    node->second_min = get_min(node->second);
-    node->third_min  = get_min(node->third);
+    if (get_min(node->second))
+        node->second_min = get_min(node->second);
+
+    if (get_min(node->third))
+        node->third_min  = get_min(node->third);
 }
 
 
@@ -138,7 +245,7 @@ static struct node * update_node(struct node *old_node, struct node *added)
     new_node->second = old_node->third;
     old_node->third = NULL;
 
-    /* the two smallest elements remain in the old node,
+    /* The two smallest elements remain in the old node,
        and the two largest go to the new node */
     if (bigger_than(added, old_node->second))
         new_node->first = added;
@@ -152,111 +259,121 @@ static struct node * update_node(struct node *old_node, struct node *added)
 
     validate_node(new_node);
 
-    /* return the "larger" of the nodes */
+    /* Return the "larger" of the nodes */
     return new_node;
 }
 
 
-/* merge old root and added node in new root of tree */
-static void update_root(TREE_2_3 *tree, struct node *added)
+/* Merge old root and added node in new root of tree */
+static void update_root(Tree_2_3 tree, struct node *added)
 {
     struct node *new_root = new_inner_node();
 
-    new_root->first = *tree;
+    new_root->first = tree->root;
     new_root->second = added;
     validate_node(new_root);
 
-    *tree = new_root;
+    tree->root = new_root;
 }
 
 
-static void delete_child(TREE_2_3 tree, NODE_2_3 *node, enum nodetype type)
+/* Delete <child> node from <root> */
+static void delete_child(Node_2_3 root, Node_2_3 node)
 {
-    if (tree->first == node)
-        tree->first = NULL;
+    if (root->first == node)
+        root->first = NULL;
     else
-    if (tree->second == node)
-        tree->second = NULL;
+    if (root->second == node)
+        root->second = NULL;
     else
-    if (tree->third == node)
-        tree->third = NULL;
+    if (root->third == node)
+        root->third = NULL;
 
-    if (type == LEAF)
+    if (node->type == LEAF)
+    {
+        get_free_func(node)(node->key);
         free(node);
+    }
 }
 
 
-static void insert_child(TREE_2_3 tree, NODE_2_3 *child)
+/* Add child node in root */
+static void add_child(Node_2_3 root, Node_2_3 child)
 {
-    if (child_cnt(tree) == 1)
+    if (child_cnt(root) == 1)
     {
-        tree->second = update_node(tree->first, child);
+        root->second = update_node(root->first, child);
     }
     else
-    if (child_cnt(tree) == 2)
+    if (child_cnt(root) == 2)
     {
-        if (bigger_than(child, tree->second))
-            tree->third = update_node(tree->second, child);
+        if (bigger_than(child, root->second))
+            root->third = update_node(root->second, child);
         else
-            tree->third = update_node(tree->first, child);
+            root->third = update_node(root->first, child);
     }
     else
     {
-        fprintf(stderr, "Error! Can't add child, node is full! Line %d", __LINE__);
+        fprintf(stderr, "Error! Can't add child, root node is full! Func %s", __func__);
         exit(EXIT_FAILURE);
     }
-    validate_node(tree);
+
+    validate_node(root);
 }
 
 
-static struct node * delete_value(TREE_2_3 tree, value_t value)
+/* If the tree has a leaf with a value, the function deletes it
+   and restores the validity of the tree on the back of the recursion  */
+static struct node * delete_value(Node_2_3 root, tree_key value)
 {
-    /* value not in tree */
-    if (tree == NULL)
+    struct node *deleted = NULL;
+    func_cmp_key compare = NULL;
+
+    /* Value not in tree */
+    if (root == NULL)
         return NULL;
 
-    /* value finded */
-    if ( tree->type == LEAF && value == tree->value)
-        return tree;
+    compare = get_cmp_func(root);
 
+    /* Value finded */
+    if ( root->type == LEAF && EQUAL == compare(root->key, value) )
+        return root;
 
-    struct node *deleted = NULL;
-
-    /* try find value in tree */
-    if (value < tree->second_min)
-        deleted = delete_value(tree->first, value);
+    /* Try find value in tree */
+    if ( LESS == compare(value, root->second_min) )
+        deleted = delete_value(root->first, value);
     else
-    if ( !tree->third || (value < tree->third_min) )
-        deleted = delete_value(tree->second, value);
+    if ( !root->third || LESS == compare(value, root->third_min) )
+        deleted = delete_value(root->second, value);
     else
-        deleted = delete_value(tree->third, value);
+        deleted = delete_value(root->third, value);
 
-    /* when deleting a value results in an incorrect node (with one child)
-       We'll try to merge it with one of the brothers, and do it recursively */
+    /* When deleting a value results in an incorrect node (with one child)
+       they node will be merge with one of his brothers */
     if (deleted)
     {
         switch (deleted->type)
         {
             case LEAF:
-                        delete_child(tree, deleted, LEAF);
-                        validate_node(tree);
+                        delete_child(root, deleted);
+                        validate_node(root);
 
-                        if (child_cnt(tree) == 1)
-                            return tree;
+                        if (child_cnt(root) == 1)
+                            return root;
                         break;
 
             case INNER:
-                        delete_child(tree, deleted, INNER);
-                        validate_node(tree);
-                        insert_child(tree, deleted->first);
+                        delete_child(root, deleted);
+                        validate_node(root);
+                        add_child(root, deleted->first);
                         free(deleted);
 
-                        if (child_cnt(tree) == 1)
-                            return tree;
+                        if (child_cnt(root) == 1)
+                            return root;
                         break;
 
             case EMPTY:
-                        fprintf(stderr, "Error! Tree can't have empty node! Line %d", __LINE__);
+                        fprintf(stderr, "Error! Tree can't have empty node! Func %s", __func__);
             default:
                         exit(EXIT_FAILURE);
         }
@@ -266,157 +383,249 @@ static struct node * delete_value(TREE_2_3 tree, value_t value)
 }
 
 
-static struct node * add_value(TREE_2_3 tree, value_t value)
+/* Looking for the place where the key should be
+   if it is already occupied, it returns null
+   otherwise, inserts the key into the tree and
+   restores its validity on the back of the recursion */
+static struct node * add_value(Node_2_3 root, tree_key value, Tree_2_3 tree)
 {
-    if (tree == NULL)
-        return new_leaf_node(value);
+    struct node *result = NULL;
+    struct node *new_node = NULL;
+    func_cmp_key compare = tree->cmp_key;
 
-    if (tree->type == LEAF)
+    /* Value not in tree */
+    if (root == NULL)
+        return new_leaf_node(value, tree);
+
+    /* Find place where value must be */
+    if (root->type == LEAF)
     {
-        if (value == tree->value)
+        if (EQUAL == compare(value, root->key))
             return NULL;  // value in tree, don't duplicated
         else
-            return new_leaf_node(value); // value not in tree
+            return new_leaf_node(value, tree); // value not in tree
     }
 
-
-    struct node *new_node = NULL;
-    struct node *result = NULL;
-
-
-    if (value < tree->second_min)
-        new_node = add_value(tree->first, value);
+    /* Try find value in tree */
+    if ( LESS == compare(value, root->second_min) )
+        new_node = add_value(root->first, value, tree);
     else
-    if ( !tree->third || (value < tree->third_min) )
-        new_node = add_value(tree->second, value);
+    if ( !root->third || LESS == compare(value, root->third_min) )
+        new_node = add_value(root->second, value, tree);
     else
-        new_node = add_value(tree->third, value);
+        new_node = add_value(root->third, value, tree);
 
     /* If a new node is created when adding an item to children,
        add this node to the parent and do it recursively */
     if (new_node != NULL)
-        result = update_node(tree, new_node);
+        result = update_node(root, new_node);
 
     return result;
 }
 
 
-static void print_tree_elements_in_order(TREE_2_3 tree,  int *num_element)
+/* First free children of tree, than free tree */
+static void tree_free(Node_2_3 tree)
 {
-    if (tree == NULL)
+	if (tree == NULL)
+		return;
+
+	switch (tree->type)
+	{
+		case LEAF:
+                    get_free_func(tree)(tree->key);
+					break;
+
+		case INNER:
+					tree_free(tree->first);
+					tree_free(tree->second);
+					tree_free(tree->third);
+					break;
+
+		case EMPTY:
+					fputs("Error! Tree can't have empty node!", stderr);
+					exit(EXIT_FAILURE);
+	}
+
+	free(tree);
+}
+
+
+/* print all elemnts in tree in ascending order */
+static void print_tree_elements_in_order(Node_2_3 root,
+                                         int *num_element,
+                                         func_print_key print_key)
+{
+    if (root == NULL)
         return;
 
-    if (tree->type == LEAF)
+    if (root->type == LEAF)
     {
         (*num_element)++;
-        printf("%d) %d\n", *num_element, tree->value);
+        printf("%d) ", *num_element);
+        print_key(root->key);
+        putchar('\n');
 
         return;
     }
 
-    print_tree_elements_in_order(tree->first, num_element);
-    print_tree_elements_in_order(tree->second, num_element);
-    print_tree_elements_in_order(tree->third, num_element);
+    /* determines the order in which the tree is traversed (ascending) */
+    print_tree_elements_in_order(root->first, num_element, print_key);
+    print_tree_elements_in_order(root->second, num_element, print_key);
+    print_tree_elements_in_order(root->third, num_element, print_key);
 }
 
 
 /* ------------------------------------------------------------------------- */
 
 
-TREE_2_3 new_tree(void)
+/* Creates an empty tree with functions to operate on the key value */
+Tree_2_3 new_tree(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key key_free)
 {
-	return NULL;
+	if (!key_cmp || !key_copy || !key_free)
+	{
+        fputs("Error! Need to state compare, copy and free key functions!", stderr);
+        exit(EXIT_FAILURE);
+	}
+
+	Tree_2_3 tmp = malloc(sizeof(*tmp));
+
+	*tmp = (struct tree){ .cmp_key=key_cmp, .copy_key=key_copy, .free_key=key_free };
+
+	return tmp;
 }
 
 
-void insert_value(TREE_2_3 *tree, value_t value)
+/* Insert value in tree if it's not there */
+void insert_key(Tree_2_3 tree, tree_key value)
 {
+	if (tree == NULL)
+	{
+        fprintf(stderr, "Error! Try work with nullable node in func %s\n!", __func__);
+        exit(EXIT_FAILURE);
+	}
+
 	/* Empty tree */
-	if (*tree == NULL)
-		*tree = new_leaf_node(value);
-    else
-    if ( (*tree)->type == LEAF ) /* Tree is leaf (1 element) */
+	if (tree_is_empty(tree))
+	{
+		tree->elements++;
+		tree->root = new_leaf_node(value, tree);
+    }
+    else /* Tree is leaf (1 element) */
+    if ( tree->root->type == LEAF )
     {
         struct node *new_node = new_inner_node();
 
-        new_node->first = *tree;
-        new_node->second = new_leaf_node(value);
+        /* Create a new root and add both leaves to it */
+        new_node->first = tree->root;
+        new_node->second = new_leaf_node(value, tree);
 
-        *tree = new_node;
+        tree->root = new_node;
+        tree->elements++;
 
-        validate_node(*tree);
+        validate_node(tree->root);
     }
     else /* Element not in tree */
+    if (!search_key(tree->root, value))
 	{
-		struct node *new_node = add_value(*tree, value);
+		struct node *new_node = add_value(tree->root, value, tree);
 
-        /* need to update the root of tree */
+		tree->elements++;
+
+        /* Check is need to update the root of tree */
 		if (new_node != NULL)
             update_root(tree, new_node);
 	}
 }
 
 
-void remove_value(TREE_2_3 *tree, value_t value)
+/* Removes the key from the tree if it contains one */
+void remove_key(Tree_2_3 tree, tree_key value)
 {
     /* Empty tree */
-	if (*tree == NULL)
+	if (tree == NULL)
+	{
+        fprintf(stderr, "Error! Try work with nullable node in func %s\n!", __func__);
+        exit(EXIT_FAILURE);
+	}
+
+	/* TODO: maybe implement error/exception ? */
+	if (tree_is_empty(tree))
 		return;
+
+    /* Key not in tree */
+    if (!search_key(tree->root, value))
+        return;
 
 
     struct node *tmp = NULL;
-    struct node *deleted = delete_value(*tree, value);
+    struct node *deleted = delete_value(tree->root, value);
 
-    /* need to update the root of tree
+    tree->elements--;
+
+    /* Need to update the root of tree
      * because he had only one child left */
     if (deleted != NULL)
     {
-        if ( (*tree)->type == INNER)
+        if (tree->root->type == INNER)
         {
-            tmp = (*tree)->first;
-            free(*tree);
-            *tree = tmp;
+            tmp = tree->root->first;
+            free(tree->root);
+            tree->root = tmp;
         }
-        else
+        else /* Make tree empty */
         {
-            free(*tree);
-            *tree = NULL;
+            tree_make_empty(tree);
+            /*
+            tree->root->free_key(tree->root->key);
+            free(tree->root);
+            tree->root = NULL;
+            tree->elements = 0;
+            */
         }
     }
 }
 
 
-/* return addres leaf with value or null if value not found */
-struct node * search_value(TREE_2_3 tree, value_t value)
+/* Return addres leaf with value or null if value not found */
+struct node * search_key(Node_2_3 root, tree_key value)
 {
-	if (tree == NULL)
+	if (root == NULL)
 		return NULL;
 
-	switch (tree->type)
+
+    func_cmp_key compare = get_cmp_func(root);
+
+	switch (root->type)
 	{
 		case LEAF:
-					if (tree->value == value)
-						return tree;
-					return NULL;
+					if (EQUAL == compare(root->key, value))
+						return root;
+					break;
 
 		case INNER:
-					if (value < tree->second_min)
-						return search_value(tree->first, value);
+					if (LESS == compare(value, root->second_min))
+						return search_key(root->first, value);
 					else
-					if ( !tree->third || (value < tree->third_min) )
-						return search_value(tree->second, value);
+					if ( !root->third || LESS == compare(value, root->third_min) )
+						return search_key(root->second, value);
 					else
-						return search_value(tree->third, value);
+						return search_key(root->third, value);
 
 		case EMPTY:
 					fprintf(stderr, "Error! Tree can't have empty node!");
         default:
 					exit(EXIT_FAILURE);
 	}
+
+    /* key not found */
+	return NULL;
 }
 
 
-void print_node(struct node *node)
+/* Prints the node structure depending on its type
+   you need to specify a function to print the value of the key */
+void print_node(struct node *node, func_print_key print_key)
 {
     if (node == NULL)
     {
@@ -429,7 +638,9 @@ void print_node(struct node *node)
         case LEAF:
                     puts("Node is leaf");
                     printf("Adr: %p\n", node);
-                    printf("Val: %d\n", node->value);
+                    printf("Val: ");
+                    print_key(node->key);
+                    putchar('\n');
                     break;
 
         case INNER:
@@ -439,15 +650,22 @@ void print_node(struct node *node)
                     printf("Second adr: %p\n", node->second);
                     printf("Third adr: %p\n", node->third);
 
-                    printf("Min second: %d\n", node->second_min);
-                    if (node->third)
-                        printf("Min third: %d\n", node->third_min);
+                    printf("Min second: ");
+                    print_key(node->second_min);
+                    putchar('\n');
 
+                    if (node->third)
+                    {
+                        printf("Min third: ");
+                        print_key(node->third_min);
+                        putchar('\n');
+                    }
                     break;
 
         case EMPTY:
                     puts("Node is empty");
                     printf("Adr: %p\n", node);
+                    break;
 
         default:
                     printf("Error! Incorrect node!");
@@ -456,58 +674,57 @@ void print_node(struct node *node)
 }
 
 
-void print_tree(TREE_2_3 tree)
+/* Print tree. Need to pass a custom function to print the key */
+void print_tree(Tree_2_3 tree, func_print_key print_key)
 {
     int num_element = 0;
 
-    print_tree_elements_in_order(tree, &num_element);
+    print_tree_elements_in_order(tree->root, &num_element, print_key);
 }
 
 
-bool tree_is_empty(TREE_2_3 tree)
+bool tree_is_empty(Tree_2_3 tree)
 {
-    return tree_count_elements(tree) == 0; // tree == NULL;
+    return tree_count_elements(tree) == 0;
 }
 
 
-/* count of elements(leafs) in tree */
-int tree_count_elements(TREE_2_3 tree)
+/* Getter for the root of tree */
+struct node * tree_get_root(Tree_2_3 tree)
 {
-    if (tree == NULL)
+    return tree->root;
+}
+
+
+/* Count of elements(leafs) in tree */
+int tree_count_elements(Tree_2_3 tree)
+{
+    return tree->elements;
+}
+
+
+/* Return height of tree */
+int tree_height(Tree_2_3 tree)
+{
+    if (tree == NULL || tree_is_empty(tree))
         return 0;
 
-    if (tree->type == LEAF)
-        return 1;
-
-    int cnt = 0;
-
-    cnt += tree_count_elements(tree->first);
-    cnt += tree_count_elements(tree->second);
-    cnt += tree_count_elements(tree->third);
-
-    return cnt;
-}
-
-
-/* return height of tree */
-int tree_height(TREE_2_3 tree)
-{
     int height = 0;
+    struct node *current = tree->root;
 
-    if (tree == NULL)
-        return height;
 
-    while (tree->type != LEAF)
+    while (current->type != LEAF)
     {
         height++;
-        tree = tree->first;
+        current = current->first;
     }
 
     return height;
 }
 
 
-value_t tree_get_min(TREE_2_3 tree)
+/* Returns the minimum key in the tree */
+tree_key tree_get_min(Tree_2_3 tree)
 {
     if (tree == NULL)
     {
@@ -515,19 +732,34 @@ value_t tree_get_min(TREE_2_3 tree)
         exit(EXIT_FAILURE);
     }
 
-    return get_min(tree);
-}
-
-
-value_t tree_get_max(TREE_2_3 tree)
-{
-    if (tree == NULL)
+    if (tree_is_empty(tree))
     {
         fputs("Can't find max value in empty tree. Error!", stderr);
         exit(EXIT_FAILURE);
     }
 
-    struct node *current = tree;
+    return get_min(tree->root);
+}
+
+
+/* Returns the maximum key in the tree */
+tree_key tree_get_max(Tree_2_3 tree)
+{
+    struct node *current = tree->root;
+
+
+    if (tree == NULL)
+    {
+        fputs("Can't find max value in non exist tree. Error!", stderr);
+        exit(EXIT_FAILURE);
+    }
+
+    if (tree_is_empty(tree))
+    {
+        fputs("Can't find max value in empty tree. Error!", stderr);
+        exit(EXIT_FAILURE);
+    }
+
 
     while (current->type != LEAF)
     {
@@ -543,31 +775,23 @@ value_t tree_get_max(TREE_2_3 tree)
         }
     }
 
-    return current->value;
+    return current->key;
 }
 
 
-/* first free children of tree, than free tree*/
-void tree_delete(TREE_2_3 tree)
+/* Release all nodes in tree and make tree is empy */
+void tree_make_empty(Tree_2_3 tree)
 {
-	if (tree == NULL)
-		return;
+    tree_free(tree->root);
 
-	switch (tree->type)
-	{
-		case LEAF:
-					break;
+    tree->root = NULL;
+    tree->elements = 0;
+}
 
-		case INNER:
-					tree_delete(tree->first);
-					tree_delete(tree->second);
-					tree_delete(tree->third);
-					break;
 
-		case EMPTY:
-					fprintf(stderr, "Error! Tree can't have empty node!");
-					exit(EXIT_FAILURE);
-	}
-
-	free(tree);
+/* Releases the memory and resources allocated for the tree */
+void tree_delete(Tree_2_3 tree)
+{
+    tree_free(tree->root);
+    free(tree);
 }
