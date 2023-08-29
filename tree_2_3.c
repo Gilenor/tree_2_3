@@ -442,12 +442,12 @@ static struct node * search_value(Node_2_3 root, tree_key value)
 
 		case INNER:
 					if (LESS == compare(value, root->second_min))
-						return search_key(root->first, value);
+						return search_value(root->first, value);
 					else
 					if ( !root->third || LESS == compare(value, root->third_min) )
-						return search_key(root->second, value);
+						return search_value(root->second, value);
 					else
-						return search_key(root->third, value);
+						return search_value(root->third, value);
 
 		case EMPTY:
 					fprintf(stderr, "Error! Tree can't have empty node!");
@@ -562,7 +562,7 @@ void insert_key(Tree_2_3 tree, tree_key value)
         validate_node(tree->root);
     }
     else /* Element not in tree */
-    if (!search_key(tree->root, value))
+    if (!search_key(tree, value))
 	{
 		struct node *new_node = add_value(tree->root, value, tree);
 
@@ -590,7 +590,7 @@ void remove_key(Tree_2_3 tree, tree_key value)
 		return;
 
     /* Key not in tree */
-    if (!search_key(tree->root, value))
+    if (!search_key(tree, value))
         return;
 
 

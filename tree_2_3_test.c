@@ -115,7 +115,7 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
 {
     for (unsigned i = 0; i < len_arr; i++)
     {
-        if (!search_key(tree_get_root(tree), get_addr_el(arr, i)))
+        if (!search_key(tree, get_addr_el(arr, i)))
             insert_key(tree, get_addr_el(arr, i));
 
         //print_tree(tree, print_key);
@@ -130,7 +130,7 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
     printf("Elements in tree: %d\n", tree_count_elements(tree));
     putchar('\n');
 
-    printf("Uniq elements in tree: %d\n", len_arr-(len_arr-tree_count_elements(tree)));
+    printf("Uniq elements in array: %d\n", len_arr-(len_arr-tree_count_elements(tree)));
     printf("Duplicated elements in array: %d\n", len_arr-tree_count_elements(tree));
     putchar('\n');
 
@@ -139,7 +139,7 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
     {
         tree_key deleted = tree_get_min(tree);
 
-        if (search_key(tree_get_root(tree), deleted))
+        if (search_key(tree, deleted))
         {
             printf("Delete value ");
             print_key(deleted);
