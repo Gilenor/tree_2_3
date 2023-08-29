@@ -93,7 +93,7 @@ void            tree_make_empty (Tree_2_3 tree);
 
 void 			insert_key	    (Tree_2_3 tree, tree_key key);
 void            remove_key      (Tree_2_3 tree, tree_key key);
-struct node * 	search_key	    (Node_2_3 root, tree_key key);
+struct node * 	search_key	    (Tree_2_3 tree, tree_key key);
 
 void            print_node      (Node_2_3 node, func_print_key print_key);
 void            print_tree      (Tree_2_3 tree, func_print_key print_key);

@@ -424,6 +424,42 @@ static struct node * add_value(Node_2_3 root, tree_key value, Tree_2_3 tree)
 }
 
 
+/* Return addres leaf with value or null if value not found */
+static struct node * search_value(Node_2_3 root, tree_key value)
+{
+	if (root == NULL)
+		return NULL;
+
+
+    func_cmp_key compare = get_cmp_func(root);
+
+	switch (root->type)
+	{
+		case LEAF:
+					if (EQUAL == compare(root->key, value))
+						return root;
+					break;
+
+		case INNER:
+					if (LESS == compare(value, root->second_min))
+						return search_key(root->first, value);
+					else
+					if ( !root->third || LESS == compare(value, root->third_min) )
+						return search_key(root->second, value);
+					else
+						return search_key(root->third, value);
+
+		case EMPTY:
+					fprintf(stderr, "Error! Tree can't have empty node!");
+        default:
+					exit(EXIT_FAILURE);
+	}
+
+    /* key not found */
+	return NULL;
+}
+
+
 /* First free children of tree, than free tree */
 static void tree_free(Node_2_3 tree)
 {
@@ -576,50 +612,17 @@ void remove_key(Tree_2_3 tree, tree_key value)
         else /* Make tree empty */
         {
             tree_make_empty(tree);
-            /*
-            tree->root->free_key(tree->root->key);
-            free(tree->root);
-            tree->root = NULL;
-            tree->elements = 0;
-            */
         }
     }
 }
 
 
-/* Return addres leaf with value or null if value not found */
-struct node * search_key(Node_2_3 root, tree_key value)
+/* Return addres leaf with value or null if value not found
+ * Wrapper function for finding the key. It is necessary that the user
+ * does not call the root of the tree, but simply passes the tree itself */
+struct node * search_key(Tree_2_3 tree, tree_key value)
 {
-	if (root == NULL)
-		return NULL;
-
-
-    func_cmp_key compare = get_cmp_func(root);
-
-	switch (root->type)
-	{
-		case LEAF:
-					if (EQUAL == compare(root->key, value))
-						return root;
-					break;
-
-		case INNER:
-					if (LESS == compare(value, root->second_min))
-						return search_key(root->first, value);
-					else
-					if ( !root->third || LESS == compare(value, root->third_min) )
-						return search_key(root->second, value);
-					else
-						return search_key(root->third, value);
-
-		case EMPTY:
-					fprintf(stderr, "Error! Tree can't have empty node!");
-        default:
-					exit(EXIT_FAILURE);
-	}
-
-    /* key not found */
-	return NULL;
+    return search_value(tree->root, value);
 }
 
 
