@@ -6,7 +6,9 @@
 
 #include <time.h>
 #include <sys/time.h>
+
 #include "tree_2_3.h"
+#include "log/log.h"
 
 #define SIZE_ARR(arr)   (sizeof(arr)/sizeof(*arr))
 
@@ -17,7 +19,7 @@ typedef void * (func_get_arr_el_adr) (void *, unsigned);
 /* ========================================================================= */
 
 
-int cmp_double(tree_key r, tree_key l)
+int cmp_double(TreeKey r, TreeKey l)
 {
     if (*(double*)r > *(double*)l)
         return GREATER;
@@ -29,9 +31,9 @@ int cmp_double(tree_key r, tree_key l)
 }
 
 
-tree_key copy_double(tree_key key)
+TreeKey copy_double(TreeKey key)
 {
-    tree_key tmp = malloc(sizeof(double));
+    TreeKey tmp = malloc(sizeof(double));
 
     *(double*)tmp = *(double*)key;
 
@@ -39,7 +41,7 @@ tree_key copy_double(tree_key key)
 }
 
 
-void print_double(tree_key value)
+void print_double(TreeKey value)
 {
     printf("%f", *(double*)value);
 }
@@ -54,18 +56,18 @@ void * get_adr_double(void *arr, unsigned index)
 /* ========================================================================= */
 
 
-tree_key copy_string(tree_key key)
+TreeKey copy_string(TreeKey key)
 {
     size_t len = (strlen((char*)key) + 1);
     char *tmp = malloc(sizeof(char) * len);
 
     strcpy(tmp, (char*)key);
 
-    return (tree_key)tmp;
+    return (TreeKey)tmp;
 }
 
 
-void print_string(tree_key value)
+void print_string(TreeKey value)
 {
     printf("%s", (char*)value);
 }
@@ -73,7 +75,7 @@ void print_string(tree_key value)
 
 /* for some reason the function strcmp returns
    not '1' and '-1' but '> 0' and '< 0' and it is sad */
-int cmp_string(tree_key r, tree_key l)
+int cmp_string(TreeKey r, TreeKey l)
 {
     int res = strcmp((char*)r, (char*)l);
 
@@ -123,7 +125,7 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
     }
 
     //putchar('\n');
-    print_tree(tree, print_key);
+    tree_print(tree, print_key);
 
     putchar('\n');
     printf("Height of tree: %d\n", tree_height(tree));
@@ -137,7 +139,7 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
 
     while (!tree_is_empty(tree))
     {
-        tree_key deleted = tree_get_min(tree);
+        TreeKey deleted = tree_get_min(tree);
 
         if (search_key(tree, deleted))
         {
@@ -162,6 +164,8 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
 
 int main(int argc, char **argv)
 {
+    log_set_level(LOG_DEBUG);
+
     struct timespec start2, end2;
 
     double nums[20];
@@ -180,8 +184,10 @@ int main(int argc, char **argv)
     for (size_t i = 0; i < SIZE_ARR(nums); i++)
         nums[i] = rand_between(-100, 100);
 
-    tree_string = new_tree(cmp_string, copy_string, (func_free_key)free);
-    tree_double = new_tree(cmp_double, copy_double, (func_free_key)free);
+    tree_string = tree_create(cmp_string, NULL, NULL);
+    tree_double = tree_create(cmp_double, NULL, NULL);
+    // tree_string = tree_create(cmp_string, copy_string, (func_free_key)free);
+    // tree_double = tree_create(cmp_double, copy_double, (func_free_key)free);
 
     work_with_tree(tree_string, singers, SIZE_ARR(singers), print_string, get_adr_string);
     putchar('\n');
@@ -192,8 +198,8 @@ int main(int argc, char **argv)
 	putchar('\n');
 	fprintf(stderr, "Time to work programm %f(clock_gettime)\n", (end2.tv_sec - start2.tv_sec) + 1e-9*(end2.tv_nsec - start2.tv_nsec));
 
-	tree_delete(tree_string);
-    tree_delete(tree_double);
+	tree_destroy(tree_string);
+    tree_destroy(tree_double);
 
     return 0;
 }
