@@ -13,6 +13,14 @@
 /* -------- Data structs --------------------------------------------------- */
 
 
+/* admissible values to return from the comparison function */
+enum compare_t
+{
+    EQUAL   =  0,
+    GREATER =  1,
+    LESS    = -1,
+};
+
 enum nodetype
 {
     EMPTY,
@@ -68,6 +76,15 @@ struct _tree
 
 
 /* -------- Static functions ----------------------------------------------- */
+
+
+/* Comparison function to respect established value conventions in compare_t */
+static inline int comparator(func_cmp_key fn_cmp, TreeKey a, TreeKey b)
+{
+    int res = fn_cmp(a, b);
+
+    return (res < 0) ? LESS : (res == 0) ? EQUAL : GREATER;
+}
 
 
 /* Return address smaller node in node/tree */
@@ -140,7 +157,7 @@ static bool bigger_than(struct _node *a, struct _node *b)
     log_trace("%s", __func__);
 
     if (a && b)
-        return GREATER == get_cmp_func(a)(get_min(a), get_min(b));
+        return GREATER == comparator(get_cmp_func(a), get_min(a), get_min(b));
     else
     if (!a && b) // only <a> is Null
         return true;
@@ -397,14 +414,14 @@ static struct _node * delete_value(Node_2_3 root, TreeKey value)
 
 
     /* Value finded */
-    if ( root->type == LEAF && EQUAL == compare(root->key, value) )
+    if ( root->type == LEAF && EQUAL == comparator(compare, root->key, value) )
         return root;
 
     /* Try find value in tree */
     if ( LESS == compare(value, root->second_min) )
         deleted = delete_value(root->first, value);
     else
-    if ( !root->third || LESS == compare(value, root->third_min) )
+    if ( !root->third || LESS == comparator(compare, value, root->third_min) )
         deleted = delete_value(root->second, value);
     else
         deleted = delete_value(root->third, value);
@@ -502,15 +519,15 @@ static struct _node * search_value(Node_2_3 root, TreeKey value)
     switch (root->type)
     {
         case LEAF:
-                    if (EQUAL == compare(root->key, value))
+                    if (EQUAL == comparator(compare, root->key, value))
                         return root;
                     break;
 
         case INNER:
-                    if (LESS == compare(value, root->second_min))
+                    if (LESS == comparator(compare, value, root->second_min))
                         return search_value(root->first, value);
                     else
-                    if ( !root->third || LESS == compare(value, root->third_min) )
+                    if ( !root->third || LESS == comparator(compare, value, root->third_min) )
                         return search_value(root->second, value);
                     else
                         return search_value(root->third, value);

@@ -11,6 +11,7 @@
 #include "log/log.h"
 
 #define SIZE_ARR(arr)   (sizeof(arr)/sizeof(*arr))
+#define ABS(val)        ((val) < 0 ? -(val) : (val))
 
 
 typedef void * (func_get_arr_el_adr) (void *, unsigned);
@@ -21,13 +22,13 @@ typedef void * (func_get_arr_el_adr) (void *, unsigned);
 
 int cmp_double(TreeKey r, TreeKey l)
 {
+    if (ABS(*(double*)r - *(double*)l) <= 0.001)
+        return 0;
+
     if (*(double*)r > *(double*)l)
-        return GREATER;
+        return 1;
 
-    if (*(double*)r < *(double*)l)
-        return LESS;
-
-    return EQUAL;
+    return -1;
 }
 
 
@@ -77,15 +78,7 @@ void print_string(TreeKey value)
    not '1' and '-1' but '> 0' and '< 0' and it is sad */
 int cmp_string(TreeKey r, TreeKey l)
 {
-    int res = strcmp((char*)r, (char*)l);
-
-    if (res < 0)
-        res = LESS;
-    else
-    if (res > 0)
-        res = GREATER;
-
-    return res;
+    return strcmp((char*)r, (char*)l);;
 }
 
 
