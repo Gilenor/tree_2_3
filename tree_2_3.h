@@ -8,7 +8,8 @@
  * To work with the structure, you need to define and pass
  * to it the following user-defined functions for working with the key:
  *
- * func_cmp_key - <DEFINITION>
+ * func_cmp_key - <REQUIRED>
+ *                <DEFINITION>
  *                compares the values of two keys and, depending on the result,
  *                returns one of the values defined in enum compare_t.
  *
@@ -16,16 +17,18 @@
  *                the compared keys are passed as a function parameter
  *
  *                <RETURN VALUE>
- *                must strictly belong to one of the values defined in enum compare_t
+ *                must follow the comparison convention for the return value: 
+ *                    0 - if the elements are equal
+ *                   <0 - when the first is less than the second
+ *                   >0 - when the first is greater than the second
  *
  *                <ATTENTION>
- *                be careful when using comparison functions,
- *                they must return only one of the specified values!!!
- *                functions like strcmp() return values <0, 0, >0,
- *                which are not strictly defined!
+ *                this parameter is REQUIRED, without it it is impossible to create a tree
  *
- * func_copy_key - <DEFINITION>
+ * func_copy_key - <OPTIONAL/NULLABLE>
+ *                 <DEFINITION>
  *                 allocates memory and copies the value of the key into it
+ *                 if NULL is passed, the key will not be copied, but simply stored at the passed address
  *
  *                 <ARGUMENTS>
  *                 key whose value to copy
@@ -39,8 +42,10 @@
  *                 this is entirely the responsibility of the user,
  *                 because any work with the tree_type falls on user functions.
  *
- * func_free_key - <DEFINITION>
+ * func_free_key - <OPTIONAL/NULLABLE>
+ *                 <DEFINITION>
  *                 frees the memory allocated for the key
+ *                 if NULL is passed, the key will not be free
  *
  *                 <ARGUMENTS>
  *                 key to be removed
@@ -53,9 +58,9 @@
  *                  key to be printed
  *
  *
- * Data:    29/08/2023
+ * Data:    25/06/2026
  * Autor:   Semenov Sergey
- * Version: 2.0
+ * Version: 2.1
  *****************************************************************************/
 
 #include <stdbool.h>
@@ -65,16 +70,6 @@ typedef const void * TreeKey;
 
 typedef struct _node *Node_2_3;
 typedef struct _tree *Tree_2_3;
-
-
-
-/* admissible values to return from the comparison function */
-enum compare_t
-{
-    EQUAL   =  0,
-    GREATER =  1,
-    LESS    = -1,
-};
 
 typedef int      (*func_cmp_key)     (TreeKey, TreeKey);   /* function type to compare keys */
 typedef TreeKey  (*func_copy_key)    (TreeKey);             /* function type to copy key_t value */
