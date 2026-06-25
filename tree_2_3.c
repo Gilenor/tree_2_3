@@ -88,6 +88,11 @@ static inline int comparator(func_cmp_key fn_cmp, TreeKey a, TreeKey b)
 {
     log_trace("%s", __func__);
 
+    if (!a || !b)
+    {
+        log_warn("a: %p, b: %p", (void*)a, (void*)b);
+    }
+
     int res = fn_cmp(a, b);
 
     return (res < 0) ? LESS : (res == 0) ? EQUAL : GREATER;
@@ -445,8 +450,19 @@ static struct _node * delete_value(Node_2_3 root, TreeKey value, bool *finded)
 
 
     /* Value finded */
-    if ( root->type == LEAF && EQUAL == comparator(compare, root->key, value) )
-        return root;
+    if (root->type == LEAF)
+    {
+        if (EQUAL == comparator(compare, value, root->key))
+        {
+            return root;  // value finded
+        }
+        else
+        {
+            log_warn("The element cannot be deleted, it was not found!");
+            *finded = false;
+            return NULL; // value not in tree
+        }
+    }
 
     /* Try find value in tree */
     if ( LESS == comparator(compare, value, root->second_min) )
