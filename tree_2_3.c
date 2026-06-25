@@ -4,6 +4,9 @@
 
 #include "tree_2_3.h"
 
+#include "log/log.h"
+
+
 #define DELETE_CORRECT  NULL
 
 
@@ -12,33 +15,33 @@
 
 enum nodetype
 {
-	EMPTY,
-	INNER,
-	LEAF
+    EMPTY,
+    INNER,
+    LEAF
 };
 
 
-struct node
+struct _node
 {
-	enum nodetype type;
+    enum nodetype type;
 
-	union
-	{
-		/* If nodetype is INNER */
-		struct
-		{
-			struct node *first;
-			struct node *second;
-			struct node *third;
+    union
+    {
+        /* If nodetype is INNER */
+        struct
+        {
+            struct _node *first;
+            struct _node *second;
+            struct _node *third;
 
-			tree_key second_min;
-			tree_key third_min;
-		};
+            TreeKey second_min;
+            TreeKey third_min;
+        };
 
-		/* If nodetype is LEAF */
-		struct
-		{
-            tree_key key;
+        /* If nodetype is LEAF */
+        struct
+        {
+            TreeKey key;
 
             /* To access the function working with the key
                it is possible to use a pointer to the tree
@@ -47,14 +50,14 @@ struct node
             func_cmp_key    cmp_key;
             func_copy_key   copy_key;
             func_free_key   free_key;
-		};
-	};
+        };
+    };
 };
 
 
-struct tree
+struct _tree
 {
-    struct node *root;
+    struct _node *root;
     unsigned long elements;
 
     /* Functions for working with key value */
@@ -68,8 +71,10 @@ struct tree
 
 
 /* Return address smaller node in node/tree */
-static struct node * get_min_node(Node_2_3 root)
+static struct _node * get_min_node(Node_2_3 root)
 {
+    log_trace("%s", __func__);
+
     if (root == NULL)
         return NULL;
 
@@ -81,9 +86,11 @@ static struct node * get_min_node(Node_2_3 root)
 
 
 /* Return address smaller key for root */
-static tree_key get_min(Node_2_3 root)
+static TreeKey get_min(Node_2_3 root)
 {
-    struct node *result = get_min_node(root);
+    log_trace("%s", __func__);
+
+    struct _node *result = get_min_node(root);
 
     if (!result)
         return NULL;
@@ -92,28 +99,34 @@ static tree_key get_min(Node_2_3 root)
 }
 
 
-/* Getter for comparing function associated with tree_key type */
-static func_cmp_key get_cmp_func(struct node *node)
+/* Getter for comparing function associated with TreeKey type */
+static func_cmp_key get_cmp_func(struct _node *node)
 {
-    struct node *leaf = get_min_node(node);
+    log_trace("%s", __func__);
+
+    struct _node *leaf = get_min_node(node);
 
     return leaf->cmp_key;
 }
 
 
-/* Getter for copying function associated with tree_key type */
-static func_copy_key get_copy_func(struct node *node)
+/* Getter for copying function associated with TreeKey type */
+static func_copy_key get_copy_func(struct _node *node)
 {
-    struct node *leaf = get_min_node(node);
+    log_trace("%s", __func__);
+
+    struct _node *leaf = get_min_node(node);
 
     return leaf->copy_key;
 }
 
 
-/* Getter for freeing function associated with tree_key type */
-static func_free_key get_free_func(struct node *node)
+/* Getter for freeing function associated with TreeKey type */
+static func_free_key get_free_func(struct _node *node)
 {
-    struct node *leaf = get_min_node(node);
+    log_trace("%s", __func__);
+
+    struct _node *leaf = get_min_node(node);
 
     return leaf->free_key;
 }
@@ -122,8 +135,10 @@ static func_free_key get_free_func(struct node *node)
 /* Return true if <node a> bigger than <node b>
  * if node be  NULL he was considered greater than others
  * when sorting, all empty nodes will be on the "right" */
-static bool bigger_than(struct node *a, struct node *b)
+static bool bigger_than(struct _node *a, struct _node *b)
 {
+    log_trace("%s", __func__);
+
     if (a && b)
         return GREATER == get_cmp_func(a)(get_min(a), get_min(b));
     else
@@ -136,9 +151,11 @@ static bool bigger_than(struct node *a, struct node *b)
 
 /* Sort elements to ascending order
  * if (*a > *b) they switch places */
-static void min_max(struct node **a, struct node **b)
+static void min_max(struct _node **a, struct _node **b)
 {
-    struct node *tmp;
+    log_trace("%s", __func__);
+
+    struct _node *tmp;
 
     if (bigger_than(*a, *b))
     {
@@ -150,8 +167,10 @@ static void min_max(struct node **a, struct node **b)
 
 
 /* Count children of node */
-static int child_cnt(struct node *node)
+static int child_cnt(struct _node *node)
 {
+    log_trace("%s", __func__);
+
     if (node == NULL)
         return 0;
 
@@ -160,21 +179,25 @@ static int child_cnt(struct node *node)
 
 
 /* Make and return node with EMPTY type */
-static struct node * new_empty_node(void)
+static struct _node * new_empty_node(void)
 {
-	struct node *tmp = calloc(sizeof(struct node), 1);
+    log_trace("%s", __func__);
 
-	if (tmp == NULL)
-		exit(EXIT_FAILURE);
+    struct _node *tmp = calloc(sizeof(struct _node), 1);
 
-	return tmp;
+    if (tmp == NULL)
+        exit(EXIT_FAILURE);
+
+    return tmp;
 }
 
 
 /* Make and return node with INNER type */
-static struct node * new_inner_node(void)
+static struct _node * new_inner_node(void)
 {
-    struct node *tmp = new_empty_node();
+    log_trace("%s", __func__);
+
+    struct _node *tmp = new_empty_node();
 
     tmp->type = INNER;
 
@@ -183,29 +206,61 @@ static struct node * new_inner_node(void)
 
 
 /* Make and return node with LEAF type */
-static struct node * new_leaf_node(tree_key value, Tree_2_3 tree)
+static struct _node * new_leaf_node(TreeKey value, Tree_2_3 tree)
 {
-	struct node *tmp = new_empty_node();
+    log_trace("%s", __func__);
 
-	tmp->type = LEAF;
-	tmp->key = tree->copy_key(value);
+    struct _node *tmp = new_empty_node();
 
-	/* Each leaf contains pointers to functions
+    tmp->type = LEAF;
+    
+    /* if the copy function is defined, then a copy of the element is made
+     * otherwise the element is simply stored as an pointer */
+    if (tree->copy_key)
+        tmp->key = tree->copy_key(value);
+    else
+        tmp->key = value;
+
+    /* Each leaf contains pointers to functions
        for working with the key */
     tmp->cmp_key  = tree->cmp_key;
     tmp->copy_key = tree->copy_key;
     tmp->free_key = tree->free_key;
 
-	return tmp;
+    return tmp;
+}
+
+
+/* Releases resources allocated for the key */
+static void free_key(struct _node *node)
+{
+    log_trace("%s", __func__);
+
+    func_free_key free_fn = get_free_func(node);
+    
+    if (free_fn)
+        free_fn(node->key);
+}
+
+
+/* Releases resources allocated for the node and key */
+static void free_node(struct _node *node)
+{
+    log_trace("%s", __func__);
+
+    free_key(node);
+    free(node);
 }
 
 
 /* Sorted node in asc order and make it valid */
-static void validate_node(struct node *node)
+static void validate_node(struct _node *node)
 {
+    log_trace("%s", __func__);
+
     if (node == NULL)
     {
-        fprintf(stderr, "Error! Try work with nullable node in func %s\n!", __func__);
+        log_error("Try work with nullable node!");
         exit(EXIT_FAILURE);
     }
 
@@ -230,8 +285,10 @@ static void validate_node(struct node *node)
  * Else the two smallest elements are placed in the old node,
  * and the two largest elements are placed in the new node.
  * After that, the new node pops up further recursively.   */
-static struct node * update_node(struct node *old_node, struct node *added)
+static struct _node * update_node(struct _node *old_node, struct _node *added)
 {
+    log_trace("%s", __func__);
+
     if (old_node->third == NULL)
     {
         old_node->third = added;
@@ -240,7 +297,7 @@ static struct node * update_node(struct node *old_node, struct node *added)
         return NULL;
     }
 
-    struct node *new_node = new_inner_node();
+    struct _node *new_node = new_inner_node();
 
     new_node->second = old_node->third;
     old_node->third = NULL;
@@ -265,9 +322,11 @@ static struct node * update_node(struct node *old_node, struct node *added)
 
 
 /* Merge old root and added node in new root of tree */
-static void update_root(Tree_2_3 tree, struct node *added)
+static void update_root(Tree_2_3 tree, struct _node *added)
 {
-    struct node *new_root = new_inner_node();
+    log_trace("%s", __func__);
+
+    struct _node *new_root = new_inner_node();
 
     new_root->first = tree->root;
     new_root->second = added;
@@ -280,6 +339,8 @@ static void update_root(Tree_2_3 tree, struct node *added)
 /* Delete <child> node from <root> */
 static void delete_child(Node_2_3 root, Node_2_3 node)
 {
+    log_trace("%s", __func__);
+
     if (root->first == node)
         root->first = NULL;
     else
@@ -290,16 +351,15 @@ static void delete_child(Node_2_3 root, Node_2_3 node)
         root->third = NULL;
 
     if (node->type == LEAF)
-    {
-        get_free_func(node)(node->key);
-        free(node);
-    }
+        free_node(node);
 }
 
 
 /* Add child node in root */
 static void add_child(Node_2_3 root, Node_2_3 child)
 {
+    log_trace("%s", __func__);
+
     if (child_cnt(root) == 1)
     {
         root->second = update_node(root->first, child);
@@ -314,7 +374,7 @@ static void add_child(Node_2_3 root, Node_2_3 child)
     }
     else
     {
-        fprintf(stderr, "Error! Can't add child, root node is full! Func %s", __func__);
+        log_error("Can't add child, root node is full!");
         exit(EXIT_FAILURE);
     }
 
@@ -324,16 +384,17 @@ static void add_child(Node_2_3 root, Node_2_3 child)
 
 /* If the tree has a leaf with a value, the function deletes it
    and restores the validity of the tree on the back of the recursion  */
-static struct node * delete_value(Node_2_3 root, tree_key value)
+static struct _node * delete_value(Node_2_3 root, TreeKey value)
 {
-    struct node *deleted = NULL;
-    func_cmp_key compare = NULL;
-
+    log_trace("%s", __func__);
+    
     /* Value not in tree */
     if (root == NULL)
         return NULL;
+    
+    struct _node *deleted = NULL;
+    func_cmp_key compare = get_cmp_func(root);
 
-    compare = get_cmp_func(root);
 
     /* Value finded */
     if ( root->type == LEAF && EQUAL == compare(root->key, value) )
@@ -373,8 +434,10 @@ static struct node * delete_value(Node_2_3 root, tree_key value)
                         break;
 
             case EMPTY:
-                        fprintf(stderr, "Error! Tree can't have empty node! Func %s", __func__);
+                        log_error("Tree can't have empty node!");
+                        exit(EXIT_FAILURE);
             default:
+                        log_error("Undefined type of Node_2_3!");
                         exit(EXIT_FAILURE);
         }
     }
@@ -387,10 +450,12 @@ static struct node * delete_value(Node_2_3 root, tree_key value)
    if it is already occupied, it returns null
    otherwise, inserts the key into the tree and
    restores its validity on the back of the recursion */
-static struct node * add_value(Node_2_3 root, tree_key value, Tree_2_3 tree)
+static struct _node * add_value(Node_2_3 root, TreeKey value, Tree_2_3 tree)
 {
-    struct node *result = NULL;
-    struct node *new_node = NULL;
+    log_trace("%s", __func__);
+
+    struct _node *result = NULL;
+    struct _node *new_node = NULL;
     func_cmp_key compare = tree->cmp_key;
 
     /* Value not in tree */
@@ -425,73 +490,80 @@ static struct node * add_value(Node_2_3 root, tree_key value, Tree_2_3 tree)
 
 
 /* Return addres leaf with value or null if value not found */
-static struct node * search_value(Node_2_3 root, tree_key value)
+static struct _node * search_value(Node_2_3 root, TreeKey value)
 {
-	if (root == NULL)
-		return NULL;
-
+    log_trace("%s", __func__);
+    
+    if (root == NULL)
+        return NULL;
 
     func_cmp_key compare = get_cmp_func(root);
 
-	switch (root->type)
-	{
-		case LEAF:
-					if (EQUAL == compare(root->key, value))
-						return root;
-					break;
+    switch (root->type)
+    {
+        case LEAF:
+                    if (EQUAL == compare(root->key, value))
+                        return root;
+                    break;
 
-		case INNER:
-					if (LESS == compare(value, root->second_min))
-						return search_value(root->first, value);
-					else
-					if ( !root->third || LESS == compare(value, root->third_min) )
-						return search_value(root->second, value);
-					else
-						return search_value(root->third, value);
+        case INNER:
+                    if (LESS == compare(value, root->second_min))
+                        return search_value(root->first, value);
+                    else
+                    if ( !root->third || LESS == compare(value, root->third_min) )
+                        return search_value(root->second, value);
+                    else
+                        return search_value(root->third, value);
 
-		case EMPTY:
-					fprintf(stderr, "Error! Tree can't have empty node!");
+        case EMPTY:
+                    log_error("Tree can't have empty node!");
+                    exit(EXIT_FAILURE);
         default:
-					exit(EXIT_FAILURE);
-	}
+                    log_error("Undefined type of Node_2_3!");
+                    exit(EXIT_FAILURE);
+    }
 
     /* key not found */
-	return NULL;
+    return NULL;
 }
 
 
 /* First free children of tree, than free tree */
 static void tree_free(Node_2_3 tree)
 {
-	if (tree == NULL)
-		return;
+    log_trace("%s", __func__);
 
-	switch (tree->type)
-	{
-		case LEAF:
-                    get_free_func(tree)(tree->key);
-					break;
+    if (tree == NULL)
+        return;
 
-		case INNER:
-					tree_free(tree->first);
-					tree_free(tree->second);
-					tree_free(tree->third);
-					break;
+    switch (tree->type)
+    {
+        case LEAF:
+                    //get_free_func(tree)(tree->key);
+                    free_key(tree);
+                    break;
 
-		case EMPTY:
-					fputs("Error! Tree can't have empty node!", stderr);
-					exit(EXIT_FAILURE);
-	}
+        case INNER:
+                    tree_free(tree->first);
+                    tree_free(tree->second);
+                    tree_free(tree->third);
+                    break;
 
-	free(tree);
+        case EMPTY:
+                    log_error("Tree can't have empty node!");
+                    exit(EXIT_FAILURE);
+    }
+
+    //free_node(tree);
+    free(tree);
 }
 
 
 /* print all elemnts in tree in ascending order */
-static void print_tree_elements_in_order(Node_2_3 root,
-                                         int *num_element,
-                                         func_print_key print_key)
+static void print_tree_elements_in_order(Node_2_3 root, int *num_element, func_print_key print_key)
 {
+    log_trace("%s", __func__);
+
     if (root == NULL)
         return;
 
@@ -515,42 +587,53 @@ static void print_tree_elements_in_order(Node_2_3 root,
 /* ------------------------------------------------------------------------- */
 
 
-/* Creates an empty tree with functions to operate on the key value */
-Tree_2_3 new_tree(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key key_free)
+/** Creates an empty tree with functions to operate on the key value */
+Tree_2_3 tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key key_free)
 {
-	if (!key_cmp || !key_copy || !key_free)
-	{
-        fputs("Error! Need to state compare, copy and free key functions!", stderr);
+    log_trace("%s", __func__);
+
+    if (!key_cmp)
+    {
+        log_error("Need to state key functions --> [Necessarily: compare]; [Optional: copy, free]");
         exit(EXIT_FAILURE);
-	}
+    }
 
-	Tree_2_3 tmp = malloc(sizeof(*tmp));
+    Tree_2_3 tmp = malloc(sizeof(*tmp));
+    
+    /* maybe it's better to exit with an error */
+    if (!tmp)
+    {
+        log_warn("Failed to allocate memory for create Tree_2_3");
+        return NULL;
+    }
 
-	*tmp = (struct tree){ .cmp_key=key_cmp, .copy_key=key_copy, .free_key=key_free };
+    *tmp = (struct _tree){ .cmp_key=key_cmp, .copy_key=key_copy, .free_key=key_free };
 
-	return tmp;
+    return tmp;
 }
 
 
 /* Insert value in tree if it's not there */
-void insert_key(Tree_2_3 tree, tree_key value)
+void insert_key(Tree_2_3 tree, TreeKey value)
 {
-	if (tree == NULL)
-	{
-        fprintf(stderr, "Error! Try work with nullable node in func %s\n!", __func__);
-        exit(EXIT_FAILURE);
-	}
+    log_trace("%s", __func__);
 
-	/* Empty tree */
-	if (tree_is_empty(tree))
-	{
-		tree->elements++;
-		tree->root = new_leaf_node(value, tree);
+    if (tree == NULL)
+    {
+        log_error("Try work with nullable node");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Empty tree */
+    if (tree_is_empty(tree))
+    {
+        tree->elements++;
+        tree->root = new_leaf_node(value, tree);
     }
     else /* Tree is leaf (1 element) */
     if ( tree->root->type == LEAF )
     {
-        struct node *new_node = new_inner_node();
+        struct _node *new_node = new_inner_node();
 
         /* Create a new root and add both leaves to it */
         new_node->first = tree->root;
@@ -563,39 +646,41 @@ void insert_key(Tree_2_3 tree, tree_key value)
     }
     else /* Element not in tree */
     if (!search_key(tree, value))
-	{
-		struct node *new_node = add_value(tree->root, value, tree);
+    {
+        struct _node *new_node = add_value(tree->root, value, tree);
 
-		tree->elements++;
+        tree->elements++;
 
         /* Check is need to update the root of tree */
-		if (new_node != NULL)
+        if (new_node != NULL)
             update_root(tree, new_node);
-	}
+    }
 }
 
 
 /* Removes the key from the tree if it contains one */
-void remove_key(Tree_2_3 tree, tree_key value)
+void remove_key(Tree_2_3 tree, TreeKey value)
 {
-    /* Empty tree */
-	if (tree == NULL)
-	{
-        fprintf(stderr, "Error! Try work with nullable node in func %s\n!", __func__);
-        exit(EXIT_FAILURE);
-	}
+    log_trace("%s", __func__);
 
-	/* TODO: maybe implement error/exception ? */
-	if (tree_is_empty(tree))
-		return;
+    /* Empty tree */
+    if (tree == NULL)
+    {
+        log_error("Try work with nullable node");
+        exit(EXIT_FAILURE);
+    }
+
+    /* TODO: maybe implement error/exception ? */
+    if (tree_is_empty(tree))
+        return;
 
     /* Key not in tree */
     if (!search_key(tree, value))
         return;
 
 
-    struct node *tmp = NULL;
-    struct node *deleted = delete_value(tree->root, value);
+    struct _node *tmp = NULL;
+    struct _node *deleted = delete_value(tree->root, value);
 
     tree->elements--;
 
@@ -620,16 +705,20 @@ void remove_key(Tree_2_3 tree, tree_key value)
 /* Return addres leaf with value or null if value not found
  * Wrapper function for finding the key. It is necessary that the user
  * does not call the root of the tree, but simply passes the tree itself */
-struct node * search_key(Tree_2_3 tree, tree_key value)
+struct _node * search_key(Tree_2_3 tree, TreeKey value)
 {
+    log_trace("%s", __func__);
+
     return search_value(tree->root, value);
 }
 
 
 /* Prints the node structure depending on its type
    you need to specify a function to print the value of the key */
-void print_node(struct node *node, func_print_key print_key)
+void node_print(struct _node *node, func_print_key print_key)
 {
+    log_trace("%s", __func__);
+
     if (node == NULL)
     {
         puts("Node is empty!");
@@ -640,7 +729,7 @@ void print_node(struct node *node, func_print_key print_key)
     {
         case LEAF:
                     puts("Node is leaf");
-                    printf("Adr: %p\n", node);
+                    printf("Adr: %p\n",(void*)node);
                     printf("Val: ");
                     print_key(node->key);
                     putchar('\n');
@@ -648,10 +737,10 @@ void print_node(struct node *node, func_print_key print_key)
 
         case INNER:
                     puts("Node is inner");
-                    printf("Adr: %p\n", node);
-                    printf("First adr: %p\n", node->first);
-                    printf("Second adr: %p\n", node->second);
-                    printf("Third adr: %p\n", node->third);
+                    printf("Adr: %p\n", (void*)node);
+                    printf("First adr: %p\n", (void*)node->first);
+                    printf("Second adr: %p\n", (void*)node->second);
+                    printf("Third adr: %p\n", (void*)node->third);
 
                     printf("Min second: ");
                     print_key(node->second_min);
@@ -667,7 +756,7 @@ void print_node(struct node *node, func_print_key print_key)
 
         case EMPTY:
                     puts("Node is empty");
-                    printf("Adr: %p\n", node);
+                    printf("Adr: %p\n", (void*)node);
                     break;
 
         default:
@@ -678,8 +767,10 @@ void print_node(struct node *node, func_print_key print_key)
 
 
 /* Print tree. Need to pass a custom function to print the key */
-void print_tree(Tree_2_3 tree, func_print_key print_key)
+void tree_print(Tree_2_3 tree, func_print_key print_key)
 {
+    log_trace("%s", __func__);
+
     int num_element = 0;
 
     print_tree_elements_in_order(tree->root, &num_element, print_key);
@@ -688,13 +779,17 @@ void print_tree(Tree_2_3 tree, func_print_key print_key)
 
 bool tree_is_empty(Tree_2_3 tree)
 {
+    log_trace("%s", __func__);
+
     return tree_count_elements(tree) == 0;
 }
 
 
 /* Getter for the root of tree */
-struct node * tree_get_root(Tree_2_3 tree)
+struct _node * tree_get_root(Tree_2_3 tree)
 {
+    log_trace("%s", __func__);
+
     return tree->root;
 }
 
@@ -702,6 +797,8 @@ struct node * tree_get_root(Tree_2_3 tree)
 /* Count of elements(leafs) in tree */
 int tree_count_elements(Tree_2_3 tree)
 {
+    log_trace("%s", __func__);
+
     return tree->elements;
 }
 
@@ -709,11 +806,13 @@ int tree_count_elements(Tree_2_3 tree)
 /* Return height of tree */
 int tree_height(Tree_2_3 tree)
 {
+    log_trace("%s", __func__);
+
     if (tree == NULL || tree_is_empty(tree))
         return 0;
 
     int height = 0;
-    struct node *current = tree->root;
+    struct _node *current = tree->root;
 
 
     while (current->type != LEAF)
@@ -726,18 +825,31 @@ int tree_height(Tree_2_3 tree)
 }
 
 
-/* Returns the minimum key in the tree */
-tree_key tree_get_min(Tree_2_3 tree)
+/* Returns key of node */
+TreeKey node_get_key(Node_2_3 node)
 {
+    log_trace("%s", __func__);
+
+    if (node->type == LEAF)
+        return node->key;
+    return NULL;
+}
+
+
+/* Returns the minimum key in the tree */
+TreeKey tree_get_min(Tree_2_3 tree)
+{
+    log_trace("%s", __func__);
+
     if (tree == NULL)
     {
-        fputs("Can't find min value in empty tree. Error!", stderr);
+        log_error("Can't find min value in empty tree!");
         exit(EXIT_FAILURE);
     }
 
     if (tree_is_empty(tree))
     {
-        fputs("Can't find max value in empty tree. Error!", stderr);
+        log_error("Can't find max value in empty tree!");
         exit(EXIT_FAILURE);
     }
 
@@ -746,20 +858,22 @@ tree_key tree_get_min(Tree_2_3 tree)
 
 
 /* Returns the maximum key in the tree */
-tree_key tree_get_max(Tree_2_3 tree)
+TreeKey tree_get_max(Tree_2_3 tree)
 {
-    struct node *current = tree->root;
+    log_trace("%s", __func__);
+
+    struct _node *current = tree->root;
 
 
     if (tree == NULL)
     {
-        fputs("Can't find max value in non exist tree. Error!", stderr);
+        log_error("Can't find max value in non exist tree!");
         exit(EXIT_FAILURE);
     }
 
     if (tree_is_empty(tree))
     {
-        fputs("Can't find max value in empty tree. Error!", stderr);
+        log_error("Can't find max value in empty tree!");
         exit(EXIT_FAILURE);
     }
 
@@ -773,7 +887,7 @@ tree_key tree_get_max(Tree_2_3 tree)
             current = current->second;
         else
         {
-            fputs("Inner node with one child not valid! Error!", stderr);
+            log_error("Inner node with one child not valid!");
             exit(EXIT_FAILURE);
         }
     }
@@ -782,18 +896,11 @@ tree_key tree_get_max(Tree_2_3 tree)
 }
 
 
-/* Returns key of node */
-tree_key node_get_key(Node_2_3 node)
-{
-    if (node->type == LEAF)
-        return node->key;
-    return NULL;
-}
-
-
 /* Release all nodes in tree and make tree is empy */
 void tree_make_empty(Tree_2_3 tree)
 {
+    log_trace("%s", __func__);
+    
     tree_free(tree->root);
 
     tree->root = NULL;
@@ -802,8 +909,10 @@ void tree_make_empty(Tree_2_3 tree)
 
 
 /* Releases the memory and resources allocated for the tree */
-void tree_delete(Tree_2_3 tree)
+void tree_destroy(Tree_2_3 tree)
 {
+    log_trace("%s", __func__);
+
     tree_free(tree->root);
     free(tree);
 }
