@@ -105,5 +105,7 @@ struct node *   tree_get_root       (Tree_2_3 tree);
 int             tree_height         (Tree_2_3 tree);
 int             tree_count_elements (Tree_2_3 tree);
 
+tree_key        node_get_key    (Node_2_3 node);
+
 
 #endif

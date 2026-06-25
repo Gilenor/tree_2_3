@@ -782,6 +782,15 @@ tree_key tree_get_max(Tree_2_3 tree)
 }
 
 
+/* Returns key of node */
+tree_key node_get_key(Node_2_3 node)
+{
+    if (node->type == LEAF)
+        return node->key;
+    return NULL;
+}
+
+
 /* Release all nodes in tree and make tree is empy */
 void tree_make_empty(Tree_2_3 tree)
 {
