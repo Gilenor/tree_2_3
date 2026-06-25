@@ -9,6 +9,10 @@
 
 #define DELETE_CORRECT  NULL
 
+#define get_cmp_func(node)  (node->tree->cmp_key)
+#define get_copy_func(node) (node->tree->copy_key)
+#define get_free_func(node) (node->tree->free_key)
+
 
 /* -------- Data structs --------------------------------------------------- */
 
@@ -32,6 +36,7 @@ enum nodetype
 struct _node
 {
     enum nodetype type;
+    struct _tree *tree;
 
     union
     {
@@ -81,6 +86,8 @@ struct _tree
 /* Comparison function to respect established value conventions in compare_t */
 static inline int comparator(func_cmp_key fn_cmp, TreeKey a, TreeKey b)
 {
+    log_trace("%s", __func__);
+
     int res = fn_cmp(a, b);
 
     return (res < 0) ? LESS : (res == 0) ? EQUAL : GREATER;
@@ -116,7 +123,7 @@ static TreeKey get_min(Node_2_3 root)
 }
 
 
-/* Getter for comparing function associated with TreeKey type */
+/* Getter for comparing function associated with TreeKey type 
 static func_cmp_key get_cmp_func(struct _node *node)
 {
     log_trace("%s", __func__);
@@ -125,9 +132,10 @@ static func_cmp_key get_cmp_func(struct _node *node)
 
     return leaf->cmp_key;
 }
+*/
 
 
-/* Getter for copying function associated with TreeKey type */
+/* Getter for copying function associated with TreeKey type 
 static func_copy_key get_copy_func(struct _node *node)
 {
     log_trace("%s", __func__);
@@ -136,9 +144,10 @@ static func_copy_key get_copy_func(struct _node *node)
 
     return leaf->copy_key;
 }
+*/
 
 
-/* Getter for freeing function associated with TreeKey type */
+/* Getter for freeing function associated with TreeKey type 
 static func_free_key get_free_func(struct _node *node)
 {
     log_trace("%s", __func__);
@@ -147,6 +156,7 @@ static func_free_key get_free_func(struct _node *node)
 
     return leaf->free_key;
 }
+*/
 
 
 /* Return true if <node a> bigger than <node b>
@@ -196,25 +206,30 @@ static int child_cnt(struct _node *node)
 
 
 /* Make and return node with EMPTY type */
-static struct _node * new_empty_node(void)
+static struct _node * new_empty_node(Tree_2_3 tree)
 {
     log_trace("%s", __func__);
 
     struct _node *tmp = calloc(sizeof(struct _node), 1);
 
     if (tmp == NULL)
+    {
+        log_fatal("Cannot allocate required memory!");
         exit(EXIT_FAILURE);
+    }
+
+    tmp->tree = tree;
 
     return tmp;
 }
 
 
 /* Make and return node with INNER type */
-static struct _node * new_inner_node(void)
+static struct _node * new_inner_node(Tree_2_3 tree)
 {
     log_trace("%s", __func__);
 
-    struct _node *tmp = new_empty_node();
+    struct _node *tmp = new_empty_node(tree);
 
     tmp->type = INNER;
 
@@ -227,7 +242,7 @@ static struct _node * new_leaf_node(TreeKey value, Tree_2_3 tree)
 {
     log_trace("%s", __func__);
 
-    struct _node *tmp = new_empty_node();
+    struct _node *tmp = new_empty_node(tree);
 
     tmp->type = LEAF;
     
@@ -314,7 +329,7 @@ static struct _node * update_node(struct _node *old_node, struct _node *added)
         return NULL;
     }
 
-    struct _node *new_node = new_inner_node();
+    struct _node *new_node = new_inner_node(old_node->tree);
 
     new_node->second = old_node->third;
     old_node->third = NULL;
@@ -343,7 +358,19 @@ static void update_root(Tree_2_3 tree, struct _node *added)
 {
     log_trace("%s", __func__);
 
-    struct _node *new_root = new_inner_node();
+    if (!tree)
+    {
+        log_error("Tree is NULL!");
+        exit(EXIT_FAILURE);
+    }
+
+    if (!tree->root)
+    {
+        tree->root = added;
+        return;
+    }
+
+    struct _node *new_root = new_inner_node(tree);
 
     new_root->first = tree->root;
     new_root->second = added;
@@ -401,13 +428,17 @@ static void add_child(Node_2_3 root, Node_2_3 child)
 
 /* If the tree has a leaf with a value, the function deletes it
    and restores the validity of the tree on the back of the recursion  */
-static struct _node * delete_value(Node_2_3 root, TreeKey value)
+static struct _node * delete_value(Node_2_3 root, TreeKey value, bool *finded)
 {
     log_trace("%s", __func__);
     
     /* Value not in tree */
     if (root == NULL)
+    {
+        log_debug("The element cannot be deleted because it was not found.");
+        *finded = false;
         return NULL;
+    }
     
     struct _node *deleted = NULL;
     func_cmp_key compare = get_cmp_func(root);
@@ -418,13 +449,13 @@ static struct _node * delete_value(Node_2_3 root, TreeKey value)
         return root;
 
     /* Try find value in tree */
-    if ( LESS == compare(value, root->second_min) )
-        deleted = delete_value(root->first, value);
+    if ( LESS == comparator(compare, value, root->second_min) )
+        deleted = delete_value(root->first, value, finded);
     else
     if ( !root->third || LESS == comparator(compare, value, root->third_min) )
-        deleted = delete_value(root->second, value);
+        deleted = delete_value(root->second, value, finded);
     else
-        deleted = delete_value(root->third, value);
+        deleted = delete_value(root->third, value, finded);
 
     /* When deleting a value results in an incorrect node (with one child)
        they node will be merge with one of his brothers */
@@ -467,7 +498,7 @@ static struct _node * delete_value(Node_2_3 root, TreeKey value)
    if it is already occupied, it returns null
    otherwise, inserts the key into the tree and
    restores its validity on the back of the recursion */
-static struct _node * add_value(Node_2_3 root, TreeKey value, Tree_2_3 tree)
+static struct _node * add_value(Node_2_3 root, TreeKey value, Tree_2_3 tree, bool *duplicated)
 {
     log_trace("%s", __func__);
 
@@ -477,25 +508,31 @@ static struct _node * add_value(Node_2_3 root, TreeKey value, Tree_2_3 tree)
 
     /* Value not in tree */
     if (root == NULL)
+    {
+        log_warn("Try add value to NULL node!");
         return new_leaf_node(value, tree);
+    }
 
     /* Find place where value must be */
     if (root->type == LEAF)
     {
-        if (EQUAL == compare(value, root->key))
+        if (EQUAL == comparator(compare, value, root->key))
+        {
+            *duplicated = true;
             return NULL;  // value in tree, don't duplicated
+        }
         else
             return new_leaf_node(value, tree); // value not in tree
     }
 
     /* Try find value in tree */
-    if ( LESS == compare(value, root->second_min) )
-        new_node = add_value(root->first, value, tree);
+    if ( LESS == comparator(compare, value, root->second_min) )
+        new_node = add_value(root->first, value, tree, duplicated);
     else
-    if ( !root->third || LESS == compare(value, root->third_min) )
-        new_node = add_value(root->second, value, tree);
+    if ( !root->third || LESS == comparator(compare, value, root->third_min) )
+        new_node = add_value(root->second, value, tree, duplicated);
     else
-        new_node = add_value(root->third, value, tree);
+        new_node = add_value(root->third, value, tree, duplicated);
 
     /* If a new node is created when adding an item to children,
        add this node to the parent and do it recursively */
@@ -631,7 +668,7 @@ Tree_2_3 tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key
 
 
 /* Insert value in tree if it's not there */
-void insert_key(Tree_2_3 tree, TreeKey value)
+bool insert_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
@@ -650,7 +687,7 @@ void insert_key(Tree_2_3 tree, TreeKey value)
     else /* Tree is leaf (1 element) */
     if ( tree->root->type == LEAF )
     {
-        struct _node *new_node = new_inner_node();
+        struct _node *new_node = new_inner_node(tree);
 
         /* Create a new root and add both leaves to it */
         new_node->first = tree->root;
@@ -661,10 +698,14 @@ void insert_key(Tree_2_3 tree, TreeKey value)
 
         validate_node(tree->root);
     }
-    else /* Element not in tree */
-    if (!search_key(tree, value))
+    else /* Try add element in tree */
+    //if (!search_key(tree, value))
     {
-        struct _node *new_node = add_value(tree->root, value, tree);
+        bool duplicated = false;
+        struct _node *new_node = add_value(tree->root, value, tree, &duplicated);
+
+        if (duplicated)
+            return false;
 
         tree->elements++;
 
@@ -672,32 +713,40 @@ void insert_key(Tree_2_3 tree, TreeKey value)
         if (new_node != NULL)
             update_root(tree, new_node);
     }
+
+    return true;
 }
 
 
 /* Removes the key from the tree if it contains one */
-void remove_key(Tree_2_3 tree, TreeKey value)
+bool remove_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
     /* Empty tree */
     if (tree == NULL)
     {
-        log_error("Try work with nullable node");
+        log_error("Try work with nullable tree!");
         exit(EXIT_FAILURE);
     }
 
     /* TODO: maybe implement error/exception ? */
     if (tree_is_empty(tree))
-        return;
+        return false;
 
     /* Key not in tree */
-    if (!search_key(tree, value))
-        return;
+    // лишняя процедура
+    //if (!search_key(tree, value))
+    //    return;
 
 
+    bool finded = true;
     struct _node *tmp = NULL;
-    struct _node *deleted = delete_value(tree->root, value);
+    struct _node *deleted = delete_value(tree->root, value, &finded);
+
+
+    if (!finded)
+        return false;
 
     tree->elements--;
 
@@ -716,6 +765,8 @@ void remove_key(Tree_2_3 tree, TreeKey value)
             tree_make_empty(tree);
         }
     }
+
+    return true;
 }
 
 

@@ -78,7 +78,7 @@ void print_string(TreeKey value)
    not '1' and '-1' but '> 0' and '< 0' and it is sad */
 int cmp_string(TreeKey r, TreeKey l)
 {
-    return strcmp((char*)r, (char*)l);;
+    return strcmp((char*)r, (char*)l);
 }
 
 
@@ -104,6 +104,7 @@ double rand_between(double low, double high)
     }
     return (tmp % (int)(high-low) + low) + ((double)tmp / (double)RAND_MAX);
 }
+
 
 void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
                     func_print_key print_key, func_get_arr_el_adr get_addr_el)
@@ -132,13 +133,17 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
 
     while (!tree_is_empty(tree))
     {
+        log_debug("Get min value");
         TreeKey deleted = tree_get_min(tree);
 
+        log_debug("Search key");
         if (search_key(tree, deleted))
         {
             printf("Delete value ");
             print_key(deleted);
             printf(" from tree\n");
+
+            log_debug("Delete key");
             remove_key(tree, deleted);
             //print_tree(tree, print_key);
         }
@@ -154,15 +159,13 @@ void work_with_tree(Tree_2_3 tree, void *arr, unsigned len_arr,
 
 
 
-
-int main(int argc, char **argv)
+int main(void)
 {
-    log_set_level(LOG_DEBUG);
+    log_set_level(LOG_TRACE);
 
     struct timespec start2, end2;
 
     double nums[20];
-
     char *singers[] = { "Freddie Mercury", "Mick Jagger",  "Robert Plant",
                         "John Lennon",     "Jim Morrison", "Ozzy Osbourne",
                         "Elvis Presley",   "Axl Rose",     "David Bowie"};
@@ -170,11 +173,11 @@ int main(int argc, char **argv)
 	Tree_2_3 tree_string = NULL;
     Tree_2_3 tree_double = NULL;
 
-    srand(time(NULL));
+    //srand(time(NULL));
     clock_gettime(CLOCK_REALTIME, &start2);
 
     /* feel array nums with random values */
-    for (size_t i = 0; i < SIZE_ARR(nums); i++)
+    for (unsigned i = 0; i < SIZE_ARR(nums); i++)
         nums[i] = rand_between(-100, 100);
 
     tree_string = tree_create(cmp_string, NULL, NULL);

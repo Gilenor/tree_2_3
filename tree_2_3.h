@@ -71,10 +71,10 @@ typedef const void * TreeKey;
 typedef struct _node *Node_2_3;
 typedef struct _tree *Tree_2_3;
 
-typedef int      (*func_cmp_key)     (TreeKey, TreeKey);   /* function type to compare keys */
-typedef TreeKey  (*func_copy_key)    (TreeKey);             /* function type to copy key_t value */
-typedef void     (*func_free_key)    (TreeKey);             /* function free allocated memory and resourses */
-typedef void     (*func_print_key)   (TreeKey);             /* function to print key_t value */
+typedef int      (*func_cmp_key)     (TreeKey, TreeKey);  /* function type to compare keys */
+typedef TreeKey  (*func_copy_key)    (TreeKey);           /* function type to copy key_t value */
+typedef void     (*func_free_key)    (TreeKey);           /* function free allocated memory and resourses */
+typedef void     (*func_print_key)   (TreeKey);           /* function to print key_t value */
 
 
 /******************************************************************************
@@ -83,11 +83,11 @@ typedef void     (*func_print_key)   (TreeKey);             /* function to print
  ******************************************************************************/
 
 Tree_2_3        tree_create     (func_cmp_key, func_copy_key, func_free_key);
-void            tree_destroy     (Tree_2_3 tree);
+void            tree_destroy    (Tree_2_3 tree);
 void            tree_make_empty (Tree_2_3 tree);
 
-void            insert_key      (Tree_2_3 tree, TreeKey key);
-void            remove_key      (Tree_2_3 tree, TreeKey key);
+bool            insert_key      (Tree_2_3 tree, TreeKey key);
+bool            remove_key      (Tree_2_3 tree, TreeKey key);
 Node_2_3        search_key      (Tree_2_3 tree, TreeKey key);
 
 void            node_print      (Node_2_3 node, func_print_key print_key);
