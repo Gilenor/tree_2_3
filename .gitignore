@@ -1,0 +1,14 @@
+# binaries
+*.o
+*.obj
+*.exe
+*.out
+*.bin
+*.elf
+
+# executables
+test_tree
+
+# build folders
+build/
+cmake-build-*/
