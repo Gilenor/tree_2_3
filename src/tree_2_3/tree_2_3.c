@@ -709,20 +709,6 @@ bool insert_key(Tree_2_3 tree, TreeKey value)
         tree->elements++;
         tree->root = new_leaf_node(value, tree);
     }
-    else /* Tree is leaf (1 element) */
-    if ( tree->root->type == LEAF )
-    {
-        struct _node *new_node = new_inner_node(tree);
-
-        /* Create a new root and add both leaves to it */
-        new_node->first = tree->root;
-        new_node->second = new_leaf_node(value, tree);
-
-        tree->root = new_node;
-        tree->elements++;
-
-        validate_node(tree->root);
-    }
     else /* Try add element in tree */
     //if (!search_key(tree, value))
     {
