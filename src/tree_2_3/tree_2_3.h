@@ -8,6 +8,7 @@
  * To work with the structure, you need to define and pass
  * to it the following user-defined functions for working with the key:
  *
+ * 
  * func_cmp_key - <REQUIRED>
  *                <DEFINITION>
  *                compares the values of two keys and, depending on the result,
@@ -25,6 +26,7 @@
  *                <ATTENTION>
  *                this parameter is REQUIRED, without it it is impossible to create a tree
  *
+ * 
  * func_copy_key - <OPTIONAL/NULLABLE>
  *                 <DEFINITION>
  *                 allocates memory and copies the value of the key into it
@@ -41,7 +43,12 @@
  *                 think carefully what value you want to keep!
  *                 this is entirely the responsibility of the user,
  *                 because any work with the tree_type falls on user functions.
+ * 
+ *                 if the value is specified as NULL, then the value of the passed TreeKey pointer
+ *                 will simply be stored, which can violate the invariant of the tree as a sorted data structure, 
+ *                 which will cause UNDEFINED BEHAVIOR!!!
  *
+ * 
  * func_free_key - <OPTIONAL/NULLABLE>
  *                 <DEFINITION>
  *                 frees the memory allocated for the key
@@ -49,6 +56,11 @@
  *
  *                 <ARGUMENTS>
  *                 key to be removed
+ * 
+ *                 <ATTENTION>
+ *                 if the value is specified as NULL, 
+ *                 then the responsibility for freeing the resources allocated for TreeKey 
+ *                 falls on the shoulders of the caller
  *
  *
  * func_print_key - <DEFINITION>
