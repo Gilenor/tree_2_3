@@ -52,6 +52,22 @@ void log_log(int level, const char *file, int line, const char *fmt, ...);
     #define log(level, file, line, fmt, ...) log_log(level, file, line, fmt, ##__VA_ARGS__)
 #else
     #define log(level, file, line, fmt, ...)
+#endif 
+
+
+/* gcc ... -DLOG_LEVEL_{FATAL, ERROR, WARN, INFO, DEBBUG, TRACE} */
+#ifdef LOG_LEVEL_FATAL
+    #define LOG_LEVEL LOG_FATAL
+#elif LOG_LEVEL_ERROR
+    #define LOG_LEVEL LOG_ERROR
+#elif LOG_LEVEL_WARN
+    #define LOG_LEVEL LOG_WARN
+#elif LOG_LEVEL_INFO
+    #define LOG_LEVEL LOG_INFO
+#elif LOG_LEVEL_DEBUG
+    #define LOG_LEVEL LOG_DEBUG
+#else 
+    #define LOG_LEVEL LOG_TRACE  
 #endif
 
 
