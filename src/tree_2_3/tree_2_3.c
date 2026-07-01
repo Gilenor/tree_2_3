@@ -688,10 +688,19 @@ bool insert_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
+    /* NULL key */
+    if (value == NULL)
+    {
+        log_warn("Try insert nullable key!");
+        return false;
+    }
+
+    /* NULL tree(not exists) 
+     * TODO: maybe better exit with exception/error? */
     if (tree == NULL)
     {
-        log_error("Try work with nullable node");
-        exit(EXIT_FAILURE);
+        log_warn("Try insert element in not existing(nullable) tree!");
+        return false;
     }
 
     /* Empty tree */
@@ -721,7 +730,10 @@ bool insert_key(Tree_2_3 tree, TreeKey value)
         struct _node *new_node = add_value(tree->root, value, tree, &duplicated);
 
         if (duplicated)
+        {
+            log_debug("Try insert duplicated value in tree");
             return false;
+        }
 
         tree->elements++;
 
@@ -738,17 +750,28 @@ bool insert_key(Tree_2_3 tree, TreeKey value)
 bool remove_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
-
-    /* Empty tree */
-    if (tree == NULL)
+    
+    /* NULL key */
+    if (value == NULL)
     {
-        log_error("Try work with nullable tree!");
-        exit(EXIT_FAILURE);
+        log_warn("Try remove nullable key!");
+        return false;
     }
 
-    /* TODO: maybe implement error/exception ? */
-    if (tree_is_empty(tree))
+    /* NULL tree(not exists) 
+     * TODO: maybe better exit with exception/error? */
+    if (tree == NULL)
+    {
+        log_warn("Try remove element in not existing(nullable) tree!");
         return false;
+    }
+
+    /* Empty tree */
+    if (tree_is_empty(tree))
+    {
+        log_warn("Try remove element in empty tree!");
+        return false;
+    }
 
     /* Key not in tree */
     // лишняя процедура
@@ -865,7 +888,7 @@ bool tree_is_empty(Tree_2_3 tree)
 {
     log_trace("%s", __func__);
 
-    return tree_count_elements(tree) == 0;
+    return (tree_count_elements(tree) == 0) && (tree->root == NULL);
 }
 
 
@@ -892,10 +915,21 @@ int tree_height(Tree_2_3 tree)
 {
     log_trace("%s", __func__);
 
-    if (tree == NULL || tree_is_empty(tree))
+    /* NULL tree(not exists) 
+     * TODO: maybe better exit with exception/error? */
+    if (tree == NULL)
+    {
+        log_warn("Try get height with not exist(nullable) tree!");
         return 0;
+    }
 
-    int height = 0;
+    if (tree_is_empty(tree))
+    {
+        log_debug("Get height from empty tree");
+        return 0;
+    }
+
+    int height = 1;
     struct _node *current = tree->root;
 
 
@@ -927,14 +961,14 @@ TreeKey tree_get_min(Tree_2_3 tree)
 
     if (tree == NULL)
     {
-        log_error("Can't find min value in empty tree!");
-        exit(EXIT_FAILURE);
+        log_warn("Can't find min value in not existing(nullable) tree!");
+        return NULL;
     }
 
     if (tree_is_empty(tree))
     {
-        log_error("Can't find max value in empty tree!");
-        exit(EXIT_FAILURE);
+        log_warn("Can't find min value in empty tree!");
+        return NULL;
     }
 
     return get_min(tree->root);
@@ -951,14 +985,14 @@ TreeKey tree_get_max(Tree_2_3 tree)
 
     if (tree == NULL)
     {
-        log_error("Can't find max value in non exist tree!");
-        exit(EXIT_FAILURE);
+        log_warn("Can't find max value in not existing(nullable) tree!");
+        return NULL;
     }
 
     if (tree_is_empty(tree))
     {
-        log_error("Can't find max value in empty tree!");
-        exit(EXIT_FAILURE);
+        log_warn("Can't find max value in empty tree!");
+        return NULL;
     }
 
 
