@@ -6,8 +6,14 @@
 *.bin
 *.elf
 
+# tool files and dirrecrories
+.cache/
+*.sublime-project
+*.sublime-workspace
+compile_commands.json
+
 # executables
-test_tree
+tests/test_tree_2_3
 
 # build folders
 build/
