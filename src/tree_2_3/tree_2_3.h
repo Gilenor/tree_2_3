@@ -98,9 +98,9 @@ Tree_2_3        tree_create     (func_cmp_key, func_copy_key, func_free_key);
 void            tree_destroy    (Tree_2_3 tree);
 void            tree_make_empty (Tree_2_3 tree);
 
-bool            insert_key      (Tree_2_3 tree, TreeKey key);
-bool            remove_key      (Tree_2_3 tree, TreeKey key);
-Node_2_3        search_key      (Tree_2_3 tree, TreeKey key);
+bool            tree_insert_key (Tree_2_3 tree, TreeKey key);
+bool            tree_remove_key (Tree_2_3 tree, TreeKey key);
+Node_2_3        tree_search_key (Tree_2_3 tree, TreeKey key);
 
 void            node_print      (Node_2_3 node, func_print_key print_key);
 void            tree_print      (Tree_2_3 tree, func_print_key print_key);
