@@ -13,6 +13,8 @@
 #define get_copy_func(node) (node->tree->copy_key)
 #define get_free_func(node) (node->tree->free_key)
 
+#define MAX(a, b)   ((a) > (b) ? (a) : (b))
+
 
 /* -------- Data structs --------------------------------------------------- */
 
@@ -630,27 +632,72 @@ static void tree_free(Node_2_3 tree)
 
 
 /* print all elemnts in tree in ascending order */
-static void print_tree_elements_in_order(Node_2_3 root, int *num_element, func_print_key print_key)
+static void print_tree_elements_in_order(Node_2_3 node, int *num_element, func_print_key print_key)
 {
     log_trace("%s", __func__);
 
-    if (root == NULL)
+    if (node == NULL)
         return;
 
-    if (root->type == LEAF)
+
+    //static int height = 0;
+
+    if (node->type == LEAF)
     {
         (*num_element)++;
         printf("%d) ", *num_element);
-        print_key(root->key);
+        print_key(node->key);
+        //printf(" height: %u", height+1);
         putchar('\n');
 
         return;
     }
 
+    //height++;
+
     /* determines the order in which the tree is traversed (ascending) */
-    print_tree_elements_in_order(root->first, num_element, print_key);
-    print_tree_elements_in_order(root->second, num_element, print_key);
-    print_tree_elements_in_order(root->third, num_element, print_key);
+    print_tree_elements_in_order(node->first, num_element, print_key);
+    print_tree_elements_in_order(node->second, num_element, print_key);
+    print_tree_elements_in_order(node->third, num_element, print_key);
+
+   // height--;
+}
+
+
+static int node_height(Node_2_3 node)
+{
+    log_trace("%s", __func__);
+
+    if (node == NULL)
+    {
+        log_debug("Try get height for NULL node");
+        return 0;
+    }
+
+    if (node->type == LEAF)
+    {
+        log_debug("Get to leaf node");
+        return 1;
+    }
+
+
+    int heights[] = {
+        node_height(node->first),
+        node_height(node->second),
+        node_height(node->third)
+    };
+
+    if ( ((heights[0] && heights[1]) && (heights[0] != heights[1])) || 
+         ((heights[0] && heights[2]) && (heights[0] != heights[2])) ||
+         ((heights[1] && heights[2]) && (heights[1] != heights[2])) 
+        )
+    {
+        log_error("Violation of tree consistency. Different heights of the branches were discovered!");
+        log_error("first: %d, second: %d, third: %d", heights[0], heights[1], heights[2]);
+    }
+
+
+    return 1 + MAX(heights[0], MAX(heights[1], heights[2]));
 }
 
 
@@ -684,7 +731,7 @@ Tree_2_3 tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key
 
 
 /* Insert value in tree if it's not there */
-bool insert_key(Tree_2_3 tree, TreeKey value)
+bool tree_insert_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
@@ -733,7 +780,7 @@ bool insert_key(Tree_2_3 tree, TreeKey value)
 
 
 /* Removes the key from the tree if it contains one */
-bool remove_key(Tree_2_3 tree, TreeKey value)
+bool tree_remove_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
     
@@ -798,7 +845,7 @@ bool remove_key(Tree_2_3 tree, TreeKey value)
 /* Return addres leaf with value or null if value not found
  * Wrapper function for finding the key. It is necessary that the user
  * does not call the root of the tree, but simply passes the tree itself */
-struct _node * search_key(Tree_2_3 tree, TreeKey value)
+struct _node * tree_search_key(Tree_2_3 tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
@@ -915,17 +962,7 @@ int tree_height(Tree_2_3 tree)
         return 0;
     }
 
-    int height = 1;
-    struct _node *current = tree->root;
-
-
-    while (current->type != LEAF)
-    {
-        height++;
-        current = current->first;
-    }
-
-    return height;
+    return node_height(tree->root);
 }
 
 
