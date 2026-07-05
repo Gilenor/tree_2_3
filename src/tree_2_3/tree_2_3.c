@@ -38,7 +38,7 @@ enum nodetype
 struct _node
 {
     enum nodetype type;
-    struct _tree *tree;
+    const struct _tree *tree;
 
     union
     {
@@ -102,7 +102,7 @@ static inline int comparator(func_cmp_key fn_cmp, TreeKey a, TreeKey b)
 
 
 /* Return address smaller node in node/tree */
-static struct _node * get_min_node(Node_2_3 root)
+static const Node_2_3 * get_min_node(const Node_2_3 *root)
 {
     log_trace("%s", __func__);
 
@@ -117,11 +117,11 @@ static struct _node * get_min_node(Node_2_3 root)
 
 
 /* Return address smaller key for root */
-static TreeKey get_min(Node_2_3 root)
+static TreeKey get_min(const Node_2_3 *root)
 {
     log_trace("%s", __func__);
 
-    struct _node *result = get_min_node(root);
+    const Node_2_3 *result = get_min_node(root);
 
     if (!result)
         return NULL;
@@ -185,11 +185,11 @@ static bool bigger_than(struct _node *a, struct _node *b)
 
 /* Sort elements to ascending order
  * if (*a > *b) they switch places */
-static void min_max(struct _node **a, struct _node **b)
+static void min_max(Node_2_3 **a, Node_2_3 **b)
 {
     log_trace("%s", __func__);
 
-    struct _node *tmp;
+    Node_2_3 *tmp;
 
     if (bigger_than(*a, *b))
     {
@@ -201,7 +201,7 @@ static void min_max(struct _node **a, struct _node **b)
 
 
 /* Count children of node */
-static int child_cnt(struct _node *node)
+static int child_cnt(Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -213,11 +213,11 @@ static int child_cnt(struct _node *node)
 
 
 /* Make and return node with EMPTY type */
-static struct _node * new_empty_node(Tree_2_3 tree)
+static Node_2_3 * new_empty_node(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
-    struct _node *tmp = calloc(sizeof(struct _node), 1);
+    Node_2_3 *tmp = calloc(sizeof(Node_2_3), 1);
 
     if (tmp == NULL)
     {
@@ -232,11 +232,11 @@ static struct _node * new_empty_node(Tree_2_3 tree)
 
 
 /* Make and return node with INNER type */
-static struct _node * new_inner_node(Tree_2_3 tree)
+static Node_2_3 * new_inner_node(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
-    struct _node *tmp = new_empty_node(tree);
+    Node_2_3 *tmp = new_empty_node(tree);
 
     tmp->type = INNER;
 
@@ -245,11 +245,11 @@ static struct _node * new_inner_node(Tree_2_3 tree)
 
 
 /* Make and return node with LEAF type */
-static struct _node * new_leaf_node(TreeKey value, Tree_2_3 tree)
+static Node_2_3 * new_leaf_node(TreeKey value, const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
-    struct _node *tmp = new_empty_node(tree);
+    Node_2_3 *tmp = new_empty_node(tree);
 
     tmp->type = LEAF;
     
@@ -271,7 +271,7 @@ static struct _node * new_leaf_node(TreeKey value, Tree_2_3 tree)
 
 
 /* Releases resources allocated for the key */
-static void free_key(struct _node *node)
+static void free_key(Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -283,7 +283,7 @@ static void free_key(struct _node *node)
 
 
 /* Releases resources allocated for the node and key */
-static void free_node(struct _node *node)
+static void free_node(Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -293,7 +293,7 @@ static void free_node(struct _node *node)
 
 
 /* Sorted node in asc order and make it valid */
-static void validate_node(struct _node *node)
+static void validate_node(Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -324,7 +324,7 @@ static void validate_node(struct _node *node)
  * Else the two smallest elements are placed in the old node,
  * and the two largest elements are placed in the new node.
  * After that, the new node pops up further recursively.   */
-static struct _node * update_node(struct _node *old_node, struct _node *added)
+static Node_2_3 * update_node(Node_2_3 *old_node, Node_2_3 *added)
 {
     log_trace("%s", __func__);
 
@@ -336,7 +336,7 @@ static struct _node * update_node(struct _node *old_node, struct _node *added)
         return NULL;
     }
 
-    struct _node *new_node = new_inner_node(old_node->tree);
+    Node_2_3 *new_node = new_inner_node(old_node->tree);
 
     new_node->second = old_node->third;
     old_node->third = NULL;
@@ -361,7 +361,7 @@ static struct _node * update_node(struct _node *old_node, struct _node *added)
 
 
 /* Merge old root and added node in new root of tree */
-static void update_root(Tree_2_3 tree, struct _node *added)
+static void update_root(Tree_2_3 *tree, Node_2_3 *added)
 {
     log_trace("%s", __func__);
 
@@ -377,7 +377,7 @@ static void update_root(Tree_2_3 tree, struct _node *added)
         return;
     }
 
-    struct _node *new_root = new_inner_node(tree);
+    Node_2_3 *new_root = new_inner_node(tree);
 
     new_root->first = tree->root;
     new_root->second = added;
@@ -388,7 +388,7 @@ static void update_root(Tree_2_3 tree, struct _node *added)
 
 
 /* Delete <child> node from <root> */
-static void delete_child(Node_2_3 root, Node_2_3 node)
+static void delete_child(Node_2_3 *root, Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -407,7 +407,7 @@ static void delete_child(Node_2_3 root, Node_2_3 node)
 
 
 /* Add child node in root */
-static void add_child(Node_2_3 root, Node_2_3 child)
+static void add_child(Node_2_3 *root, Node_2_3 *child)
 {
     log_trace("%s", __func__);
 
@@ -435,7 +435,7 @@ static void add_child(Node_2_3 root, Node_2_3 child)
 
 /* If the tree has a leaf with a value, the function deletes it
    and restores the validity of the tree on the back of the recursion  */
-static struct _node * delete_value(Node_2_3 root, TreeKey value, bool *finded)
+static Node_2_3 * delete_value(Node_2_3 *root, TreeKey value, bool *finded)
 {
     log_trace("%s", __func__);
     
@@ -447,7 +447,7 @@ static struct _node * delete_value(Node_2_3 root, TreeKey value, bool *finded)
         return NULL;
     }
     
-    struct _node *deleted = NULL;
+    Node_2_3 *deleted = NULL;
     func_cmp_key compare = get_cmp_func(root);
 
 
@@ -516,12 +516,12 @@ static struct _node * delete_value(Node_2_3 root, TreeKey value, bool *finded)
    if it is already occupied, it returns null
    otherwise, inserts the key into the tree and
    restores its validity on the back of the recursion */
-static struct _node * add_value(Node_2_3 root, TreeKey value, Tree_2_3 tree, bool *duplicated)
+static Node_2_3 * add_value(Node_2_3 *root, TreeKey value, Tree_2_3 *tree, bool *duplicated)
 {
     log_trace("%s", __func__);
 
-    struct _node *result = NULL;
-    struct _node *new_node = NULL;
+    Node_2_3 *result = NULL;
+    Node_2_3 *new_node = NULL;
     func_cmp_key compare = tree->cmp_key;
 
     /* Value not in tree */
@@ -562,7 +562,7 @@ static struct _node * add_value(Node_2_3 root, TreeKey value, Tree_2_3 tree, boo
 
 
 /* Return addres leaf with value or null if value not found */
-static struct _node * search_value(Node_2_3 root, TreeKey value)
+static Node_2_3 * search_value(Node_2_3 *root, TreeKey value)
 {
     log_trace("%s", __func__);
     
@@ -601,7 +601,7 @@ static struct _node * search_value(Node_2_3 root, TreeKey value)
 
 
 /* First free children of tree, than free tree */
-static void tree_free(Node_2_3 tree)
+static void tree_free(Node_2_3 *tree)
 {
     log_trace("%s", __func__);
 
@@ -632,7 +632,7 @@ static void tree_free(Node_2_3 tree)
 
 
 /* print all elemnts in tree in ascending order */
-static void print_tree_elements_in_order(Node_2_3 node, int *num_element, func_print_key print_key)
+static void print_tree_elements_in_order(Node_2_3 *node, int *num_element, func_print_key print_key)
 {
     log_trace("%s", __func__);
 
@@ -664,7 +664,7 @@ static void print_tree_elements_in_order(Node_2_3 node, int *num_element, func_p
 }
 
 
-static int node_height(Node_2_3 node)
+static int node_height(Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -705,7 +705,7 @@ static int node_height(Node_2_3 node)
 
 
 /** Creates an empty tree with functions to operate on the key value */
-Tree_2_3 tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key key_free)
+Tree_2_3 * tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key key_free)
 {
     log_trace("%s", __func__);
 
@@ -715,7 +715,7 @@ Tree_2_3 tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key
         exit(EXIT_FAILURE);
     }
 
-    Tree_2_3 tmp = malloc(sizeof(*tmp));
+    Tree_2_3 *tmp = malloc(sizeof(*tmp));
     
     /* maybe it's better to exit with an error */
     if (!tmp)
@@ -731,7 +731,7 @@ Tree_2_3 tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_key
 
 
 /* Insert value in tree if it's not there */
-bool tree_insert_key(Tree_2_3 tree, TreeKey value)
+bool tree_insert_key(Tree_2_3 *tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
@@ -760,7 +760,7 @@ bool tree_insert_key(Tree_2_3 tree, TreeKey value)
     //if (!search_key(tree, value))
     {
         bool duplicated = false;
-        struct _node *new_node = add_value(tree->root, value, tree, &duplicated);
+        Node_2_3 *new_node = add_value(tree->root, value, tree, &duplicated);
 
         if (duplicated)
         {
@@ -780,7 +780,7 @@ bool tree_insert_key(Tree_2_3 tree, TreeKey value)
 
 
 /* Removes the key from the tree if it contains one */
-bool tree_remove_key(Tree_2_3 tree, TreeKey value)
+bool tree_remove_key(Tree_2_3 *tree, TreeKey value)
 {
     log_trace("%s", __func__);
     
@@ -813,8 +813,8 @@ bool tree_remove_key(Tree_2_3 tree, TreeKey value)
 
 
     bool finded = true;
-    struct _node *tmp = NULL;
-    struct _node *deleted = delete_value(tree->root, value, &finded);
+    Node_2_3 *tmp = NULL;
+    Node_2_3 *deleted = delete_value(tree->root, value, &finded);
 
 
     if (!finded)
@@ -845,7 +845,7 @@ bool tree_remove_key(Tree_2_3 tree, TreeKey value)
 /* Return addres leaf with value or null if value not found
  * Wrapper function for finding the key. It is necessary that the user
  * does not call the root of the tree, but simply passes the tree itself */
-struct _node * tree_search_key(Tree_2_3 tree, TreeKey value)
+const Node_2_3 * tree_search_key(const Tree_2_3 *tree, TreeKey value)
 {
     log_trace("%s", __func__);
 
@@ -855,7 +855,7 @@ struct _node * tree_search_key(Tree_2_3 tree, TreeKey value)
 
 /* Prints the node structure depending on its type
    you need to specify a function to print the value of the key */
-void node_print(struct _node *node, func_print_key print_key)
+void node_print(const Node_2_3 *node, func_print_key print_key)
 {
     log_trace("%s", __func__);
 
@@ -907,7 +907,7 @@ void node_print(struct _node *node, func_print_key print_key)
 
 
 /* Print tree. Need to pass a custom function to print the key */
-void tree_print(Tree_2_3 tree, func_print_key print_key)
+void tree_print(const Tree_2_3 *tree, func_print_key print_key)
 {
     log_trace("%s", __func__);
 
@@ -917,7 +917,7 @@ void tree_print(Tree_2_3 tree, func_print_key print_key)
 }
 
 
-bool tree_is_empty(Tree_2_3 tree)
+bool tree_is_empty(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
@@ -926,7 +926,7 @@ bool tree_is_empty(Tree_2_3 tree)
 
 
 /* Getter for the root of tree */
-struct _node * tree_get_root(Tree_2_3 tree)
+const Node_2_3 * tree_get_root(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
@@ -935,7 +935,7 @@ struct _node * tree_get_root(Tree_2_3 tree)
 
 
 /* Count of elements(leafs) in tree */
-int tree_count_elements(Tree_2_3 tree)
+int tree_count_elements(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
@@ -944,7 +944,7 @@ int tree_count_elements(Tree_2_3 tree)
 
 
 /* Return height of tree */
-int tree_height(Tree_2_3 tree)
+int tree_height(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
@@ -967,7 +967,7 @@ int tree_height(Tree_2_3 tree)
 
 
 /* Returns key of node */
-TreeKey node_get_key(Node_2_3 node)
+TreeKey node_get_key(const Node_2_3 *node)
 {
     log_trace("%s", __func__);
 
@@ -978,7 +978,7 @@ TreeKey node_get_key(Node_2_3 node)
 
 
 /* Returns the minimum key in the tree */
-TreeKey tree_get_min(Tree_2_3 tree)
+TreeKey tree_get_min(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
@@ -999,11 +999,11 @@ TreeKey tree_get_min(Tree_2_3 tree)
 
 
 /* Returns the maximum key in the tree */
-TreeKey tree_get_max(Tree_2_3 tree)
+TreeKey tree_get_max(const Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
-    struct _node *current = tree->root;
+    Node_2_3 *current = tree->root;
 
 
     if (tree == NULL)
@@ -1038,7 +1038,7 @@ TreeKey tree_get_max(Tree_2_3 tree)
 
 
 /* Release all nodes in tree and make tree is empy */
-void tree_make_empty(Tree_2_3 tree)
+void tree_make_empty(Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
     
@@ -1050,7 +1050,7 @@ void tree_make_empty(Tree_2_3 tree)
 
 
 /* Releases the memory and resources allocated for the tree */
-void tree_destroy(Tree_2_3 tree)
+void tree_destroy(Tree_2_3 *tree)
 {
     log_trace("%s", __func__);
 
