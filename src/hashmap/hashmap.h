@@ -49,7 +49,7 @@ typedef void     (*func_print_kv)   (const KeyVal*);                  /* functio
  * @note Key ownership depends on func_copy and func_free.
  */
 HashMap * hm_create     (func_cmp_kv func_cmp, func_copy_kv func_copy, func_free_kv func_free);
-void      hm_destroy    (HashMap *hashmap);
+void      hm_destroy    (HashMap **hashmap);
 void      hm_clear      (HashMap *hashmap);
  
 bool      hm_insert_kv  (HashMap *hashmap, HmKey key, HmValue value);
