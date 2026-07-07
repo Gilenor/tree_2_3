@@ -7,7 +7,7 @@
 
 #include <check.h>
 
-#include "hashmap.h"
+#include "hashmap/hashmap.h"
 #include "log/log.h"
 
 
@@ -846,7 +846,7 @@ int main(void)
     srunner_add_suite(sr, suite_copy_hashmap);
 
     srunner_run_all(sr, CK_NORMAL);
-    //srunner_run(sr, "Remove", "Remove one key", CK_VERBOSE);
+    //srunner_run(sr, "Create", NULL, CK_VERBOSE);
     int failed = srunner_ntests_failed(sr);
 
     srunner_free(sr);
