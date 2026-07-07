@@ -9,11 +9,14 @@
 
 #include <check.h>
 
-#include "src/tree_2_3/tree_2_3.h"
-#include "src/log/log.h"
+#include "tree_2_3/tree_2_3.h"
+#include "log/log.h"
 
 
 #define SIZE_ARR(arr)   (sizeof(arr)/sizeof(*arr))
+
+#define MAKE_TREE(key_type)         tree_create(cmp_##key_type, copy_##key_type, free_##key_type)
+#define MAKE_TREE_PLAIN(key_type)   tree_create(cmp_##key_type, NULL, NULL)
 
 
 static Tree_2_3 *_tree;  /* global object for test cases */
@@ -103,15 +106,12 @@ static void print_string(TreeKey value)
 
 /* ---------- auxiliary functions ------------------------------------------ */
 
-#define MAKE_TREE(key_type)         tree_create(cmp_##key_type, copy_##key_type, free_##key_type)
-#define MAKE_TREE_PLAIN(key_type)   tree_create(cmp_##key_type, NULL, NULL)
-
-
 static void setup(void)
 {
     log_trace("%s", __func__);
 
     _tree = MAKE_TREE_PLAIN(double);
+    ck_assert_ptr_nonnull(_tree);
 }
 
 
@@ -119,7 +119,8 @@ static void teardown(void)
 {
     log_trace("%s", __func__);
 
-    tree_destroy(_tree);
+    tree_destroy(&_tree);
+    ck_assert_ptr_null(_tree);
 }
 
 
@@ -129,6 +130,7 @@ static void teardown(void)
 
 START_TEST(test_create_empty_tree)
 {
+    g_memory_counter = &(struct memory_counter){0};
     Tree_2_3 *tree = MAKE_TREE_PLAIN(double);
 
 
@@ -141,7 +143,10 @@ START_TEST(test_create_empty_tree)
     ck_assert_ptr_null(tree_get_min(tree));
     ck_assert_ptr_null(tree_get_max(tree));
 
-    tree_destroy(tree);
+    tree_destroy(&tree);
+    ck_assert_int_eq(g_memory_counter->alloc, 0);
+
+    g_memory_counter = NULL;
 }
 END_TEST
 
@@ -150,9 +155,16 @@ END_TEST
 
 START_TEST(test_destroy_empty_tree)
 {
+    g_memory_counter = &(struct memory_counter){0};
     Tree_2_3 *tree = MAKE_TREE_PLAIN(double);
 
-    tree_destroy(tree);
+
+    tree_destroy(&tree);
+
+    ck_assert_ptr_null(tree);
+    ck_assert_int_eq(g_memory_counter->free, 0);
+
+    g_memory_counter = NULL;
 }
 END_TEST
 
@@ -171,8 +183,9 @@ START_TEST(test_destroy_full_tree)
         ck_assert(tree_insert_key(tree, &vals[i]));
     }
 
-    tree_destroy(tree);
+    tree_destroy(&tree);
 
+    ck_assert_ptr_null(tree);
     ck_assert_int_eq(g_memory_counter->free, len_vals);
     ck_assert_int_eq(g_memory_counter->free, g_memory_counter->alloc);
 
@@ -201,9 +214,11 @@ START_TEST(test_make_empty_tree)
     ck_assert_int_eq(tree_height(tree), 0);
     ck_assert_int_eq(tree_count_elements(tree), 0);
     ck_assert_int_eq(g_memory_counter->free, len_vals);
-    ck_assert_int_eq(g_memory_counter->free, g_memory_counter->alloc);
+    ck_assert_int_eq(g_memory_counter->alloc, len_vals);
 
-    tree_destroy(tree);
+    tree_destroy(&tree);
+    ck_assert_ptr_null(tree);
+
     g_memory_counter = NULL;
 }
 END_TEST
@@ -211,6 +226,24 @@ END_TEST
 
 /* ========== INSERT ======================================================= */
 
+/* using fixtures - setup/teardown callbacks */
+START_TEST(test_insert_null)
+{
+    ck_assert(!tree_insert_key(_tree, NULL)); // try insert NULL in empty tree
+
+    /* check that the tree remains empty */
+    ck_assert(tree_is_empty(_tree));
+    ck_assert_int_eq(tree_height(_tree), 0);
+    ck_assert_int_eq(tree_count_elements(_tree), 0);
+
+    ck_assert_ptr_null(tree_get_root(_tree));
+    ck_assert_ptr_null(tree_get_min(_tree));
+    ck_assert_ptr_null(tree_get_max(_tree));
+}
+END_TEST
+
+
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_insert_one_element)
 {
     const double key = 10.0;
@@ -237,39 +270,7 @@ START_TEST(test_insert_one_element)
 END_TEST
 
 
-START_TEST(test_insert_null)
-{
-    const double key = 10.0;
-
-
-    ck_assert(!tree_insert_key(_tree, NULL)); // try insert NULL in empty tree
-
-    /* check that the tree remains empty */
-    ck_assert(tree_is_empty(_tree));
-    ck_assert_int_eq(tree_height(_tree), 0);
-    ck_assert_int_eq(tree_count_elements(_tree), 0);
-    ck_assert_ptr_null(tree_get_root(_tree));
-
-    ck_assert(tree_insert_key(_tree, &key));
-    ck_assert(!tree_insert_key(_tree, NULL)); // try insert NULL in not empty tree
-
-    /* we check that there is one element left in the tree */
-    ck_assert(!tree_is_empty(_tree));
-    ck_assert_int_eq(tree_height(_tree), 1);
-    ck_assert_int_eq(tree_count_elements(_tree), 1);
-    ck_assert_ptr_nonnull(tree_get_root(_tree));
-
-    /* we check that the only element matches the added one */
-    TreeKey min = tree_get_min(_tree);
-    TreeKey max = tree_get_max(_tree);
-    ck_assert_ptr_nonnull(min);
-    ck_assert_ptr_nonnull(max);
-    ck_assert_double_eq(*(const double *)min, key);
-    ck_assert_double_eq(*(const double *)max, key);
-}
-END_TEST
-
-
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_insert_many_ascending)
 {
     const double vals[] = { 1, 2, 3, 4, 5, 6, 7 };
@@ -293,6 +294,7 @@ START_TEST(test_insert_many_ascending)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_insert_many_descending)
 {
     const double vals[] = { 7, 6, 5, 4, 3, 2, 1 };
@@ -316,6 +318,7 @@ START_TEST(test_insert_many_descending)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_insert_duplicate)
 {
     const double key = 42;
@@ -332,6 +335,7 @@ END_TEST
 
 /* ========== REMOVE ======================================================= */
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_remove_element_in_empty_tree)
 {    
     const double key = 10;
@@ -345,6 +349,7 @@ START_TEST(test_remove_element_in_empty_tree)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_remove_null)
 {
     const double key = 10.0;
@@ -360,6 +365,7 @@ START_TEST(test_remove_null)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_remove_one_element)
 {
     const double key = 10.0;
@@ -367,9 +373,10 @@ START_TEST(test_remove_one_element)
 
     ck_assert(tree_insert_key(_tree, &key));
 
-    //Node_2_3 finded = search_key(_tree, &key);
-    //ck_assert_ptr_nonnull(finded);
-    //ck_assert_double_eq(*(const double *)node_get_key(finded), 10);
+    const Node_2_3 *finded = tree_search_key(_tree, &key);
+    ck_assert_ptr_nonnull(finded);
+    ck_assert_double_eq(*(const double *)node_get_key(finded), 10);
+    
     ck_assert(tree_remove_key(_tree, &key));
 
     ck_assert_ptr_null(tree_get_root(_tree));
@@ -379,6 +386,7 @@ START_TEST(test_remove_one_element)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_remove_missing_element)
 {
     const double missing = 99.0;
@@ -397,6 +405,7 @@ START_TEST(test_remove_missing_element)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_remove_until_empty)
 {
     const double vals[] = { 10.0, 20.0, 30.0, 40.0, 50.0 };
@@ -425,13 +434,14 @@ START_TEST(test_remove_until_empty)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_remove_random_element)
 {
     const double vals[] = { 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0 };
     const int len_vals = (int)SIZE_ARR(vals);
     const int element = rand() % len_vals;
 
-    log_debug("Random element: %lf, index: %d", vals[element], element);
+    log_debug("Remove random element: %lf, index: %d", vals[element], element);
     
 
     for (int i = 0; i < len_vals; i++)
@@ -447,6 +457,7 @@ END_TEST
 
 /* ========== SEARCH ======================================================= */
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_search_in_empty_tree)
 {
     const double key = 1;
@@ -459,6 +470,7 @@ START_TEST(test_search_in_empty_tree)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_search_missing_key)
 {
     const double missing = 15.0;
@@ -475,15 +487,37 @@ START_TEST(test_search_missing_key)
 END_TEST
 
 
+/* using fixtures - setup/teardown callbacks */
+START_TEST(tesr_search_random_key)
+{
+    const double vals[] = { 10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0 };
+    const int len_vals = (int)SIZE_ARR(vals);
+    const int element = rand() % len_vals;
+
+    log_debug("Search random element: %lf, index: %d", vals[element], element);
+    
+
+    for (int i = 0; i < len_vals; i++)
+    {
+        ck_assert(tree_insert_key(_tree, &vals[i]));
+    }
+
+    const Node_2_3 *finded = tree_search_key(_tree, &vals[element]);
+    ck_assert_ptr_nonnull(finded);
+    ck_assert_double_eq(*(double*)node_get_key(finded), vals[element]);
+}
+END_TEST
+
+
 /* ========== COPY_FUNC ==================================================== */
 
+/* using fixtures - setup/teardown callbacks */
 START_TEST(test_no_copy_key_dependent_from_source)
 {
     double query = 10.0;
     struct _key { double v; };
     struct _node{ struct _key key; const char* name; } val={.key.v=query, .name="10.0"};
 
-    
 
     ck_assert(tree_insert_key(_tree, &val));
     val.name = "99.0";
@@ -512,7 +546,7 @@ START_TEST(test_copy_key_independent_from_source)
     ck_assert_ptr_nonnull(node);
     ck_assert_double_eq(*(const double*)node_get_key(node), query);
 
-    tree_destroy(tree);
+    tree_destroy(&tree);
 }
 END_TEST
 
@@ -552,14 +586,15 @@ START_TEST(test_height_within_theoretical_bounds)
     ck_assert_double_ge(height, height_min); // 
     ck_assert_double_le(height, height_max);
 
-    tree_destroy(tree);
+    tree_destroy(&tree);
 }
 END_TEST
 
 
 /* ---------- suites ------------------------------------------------------- */
 
-static Suite* make_suite_create(void) {
+static Suite* make_suite_create(void)
+{
     Suite* s = suite_create("Create");
     
     TCase* tc_create = tcase_create("Create tree");
@@ -570,7 +605,8 @@ static Suite* make_suite_create(void) {
 }
 
 
-static Suite* make_suite_destroy(void) {
+static Suite* make_suite_destroy(void)
+{
     Suite* s = suite_create("Destroy");
 
     TCase* tc_destroy_empty = tcase_create("Destroy empty tree");
@@ -655,7 +691,6 @@ static Suite* make_suite_remove(void)
     tcase_add_checked_fixture(tc_remove_random_element, setup, teardown);
     tcase_add_test(tc_remove_random_element, test_remove_random_element);
     suite_add_tcase(s, tc_remove_random_element);
-    
 
     return s;
 }
@@ -675,27 +710,34 @@ static Suite* make_suite_search(void)
     tcase_add_test(tc_search_in_empty, test_search_in_empty_tree);
     suite_add_tcase(s, tc_search_in_empty);
 
+    TCase* tc_search_random = tcase_create("Search random element");
+    tcase_add_checked_fixture(tc_search_random, setup, teardown);
+    tcase_add_test(tc_search_random, tesr_search_random_key);
+    suite_add_tcase(s, tc_search_random);
+
     return s;
 }
 
 
-static Suite* make_suite_copy(void) {
+static Suite* make_suite_copy(void)
+{
     Suite* s = suite_create("Copy");
     
-    TCase* tc_copy_func = tcase_create("Independence TreeKey with user copy function");
-    tcase_add_test(tc_copy_func, test_copy_key_independent_from_source);
-    suite_add_tcase(s, tc_copy_func);
-
     TCase* tc_no_copy_func = tcase_create("Dependence TreeKey with no user copy function");
     tcase_add_checked_fixture(tc_no_copy_func, setup, teardown);
     tcase_add_test(tc_no_copy_func, test_no_copy_key_dependent_from_source);
     suite_add_tcase(s, tc_no_copy_func);
 
+    TCase* tc_copy_func = tcase_create("Independence TreeKey with user copy function");
+    tcase_add_test(tc_copy_func, test_copy_key_independent_from_source);
+    suite_add_tcase(s, tc_copy_func);
+
     return s;
 }
 
 
-static Suite* make_suite_height(void) {
+static Suite* make_suite_height(void)
+{
     Suite* s = suite_create("Height");
     
     TCase* tc_height_bounds = tcase_create("Height within acceptable limits");
@@ -725,7 +767,8 @@ int main(void)
         * suite_copy_key     = make_suite_copy(),
         * suite_height_tree  = make_suite_height();
 
-    SRunner* sr = srunner_create(suite_create_tree);
+    SRunner* sr = srunner_create(suite_create("Test Tree_2_3"));
+    srunner_add_suite(sr, suite_create_tree);
     srunner_add_suite(sr, suite_destroy_tree);
     srunner_add_suite(sr, suite_insert_key);
     srunner_add_suite(sr, suite_remove_key);
