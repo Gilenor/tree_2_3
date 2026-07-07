@@ -52,7 +52,7 @@ typedef void     (*func_print_key)   (TreeKey);           /* function to print k
  * @note Key ownership depends on func_copy and func_free.
  */
 Tree_2_3 *       tree_create     (func_cmp_key func_cmp, func_copy_key func_copy, func_free_key func_free);
-void             tree_destroy    (Tree_2_3 *tree);
+void             tree_destroy    (Tree_2_3 **tree);
 void             tree_make_empty (Tree_2_3 *tree);
 
 bool             tree_insert_key (Tree_2_3 *tree, TreeKey key);

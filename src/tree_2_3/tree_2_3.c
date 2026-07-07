@@ -724,7 +724,13 @@ Tree_2_3 * tree_create(func_cmp_key key_cmp, func_copy_key key_copy, func_free_k
         return NULL;
     }
 
-    *tmp = (struct _tree){ .cmp_key=key_cmp, .copy_key=key_copy, .free_key=key_free };
+    *tmp = (struct _tree){ 
+        .root=NULL,
+        .elements=0,
+        .cmp_key=key_cmp, 
+        .copy_key=key_copy, 
+        .free_key=key_free
+    };
 
     return tmp;
 }
@@ -1050,10 +1056,12 @@ void tree_make_empty(Tree_2_3 *tree)
 
 
 /* Releases the memory and resources allocated for the tree */
-void tree_destroy(Tree_2_3 *tree)
+void tree_destroy(Tree_2_3 **tree)
 {
     log_trace("%s", __func__);
 
-    tree_free(tree->root);
-    free(tree);
+    tree_free((*tree)->root);
+    free(*tree);
+
+    *tree = NULL;
 }
